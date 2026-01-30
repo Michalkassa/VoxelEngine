@@ -5,6 +5,9 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 
+import static org.lwjgl.opengl.GL11.GL_FALSE;
+import static org.lwjgl.opengl.GL20.*;
+
 public class ShaderLoader {
 
     public static String loadFromFile(String path) {
@@ -29,6 +32,20 @@ public class ShaderLoader {
         }
 
         return res.toString();
+    }
+
+     public static int createShader(String path, int type) {
+        String source = ShaderLoader.loadFromFile(path);
+        int shader = glCreateShader(type);
+        glShaderSource(shader, source);
+        glCompileShader(shader);
+
+        if (glGetShaderi(shader, GL_COMPILE_STATUS) == GL_FALSE) {
+            String log = glGetShaderInfoLog(shader);
+            throw new RuntimeException("Failed to compile shader '" + path + "':\n" + log);
+        }
+
+        return shader;
     }
 
 
