@@ -20,10 +20,14 @@ public class Game {
         renderer.init();
     }
     private void loop(){
-
+        float lastFrameTime = 0;
         while (!window.ShouldClose()) {
+            float currentTime = (float) glfwGetTime();
+            float deltaTime = currentTime - lastFrameTime;
+            lastFrameTime = currentTime;
+
             window.update();
-            renderer.update();
+            renderer.update(deltaTime);
             glfwPollEvents();
             glfwSwapBuffers(window.getWindowId());
         }

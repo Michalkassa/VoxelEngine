@@ -8,12 +8,42 @@ import java.nio.charset.StandardCharsets;
 import static org.lwjgl.opengl.GL11.GL_FALSE;
 import static org.lwjgl.opengl.GL20.*;
 
-public class ShaderLoader {
+public class Shader {
 
-    public static String loadFromFile(String path) {
+    private int SHADER_PROGRAM;
+
+    public Shader(String vertexShaderPath, String fragmentShaderPath){
+
+        int vertexShader = createShader(vertexShaderPath, GL_VERTEX_SHADER);
+        int fragmentShader = createShader(fragmentShaderPath, GL_FRAGMENT_SHADER);
+        SHADER_PROGRAM = glCreateProgram();
+        glAttachShader(SHADER_PROGRAM,vertexShader);
+        glAttachShader(SHADER_PROGRAM,fragmentShader);
+        glLinkProgram(SHADER_PROGRAM);
+
+        glDeleteShader(vertexShader);
+        glDeleteShader(fragmentShader);
+    }
+
+    public void bind(){
+        glUseProgram(SHADER_PROGRAM);
+    }
+
+    public void unbind(){
+        glUseProgram(0);
+    }
+
+    public void cleanup(){
+        glDeleteProgram(SHADER_PROGRAM);
+    }
+
+    public int getShaderProgram(){
+        return SHADER_PROGRAM;
+    }
+    private static String loadFromFile(String path) {
         StringBuilder res = new StringBuilder();
 
-        try (InputStream in = ShaderLoader.class.getResourceAsStream(path)) {
+        try (InputStream in = Shader.class.getResourceAsStream(path)) {
 
             if (in == null) {
                 throw new RuntimeException("Shader not found: " + path);
@@ -34,8 +64,8 @@ public class ShaderLoader {
         return res.toString();
     }
 
-     public static int createShader(String path, int type) {
-        String source = ShaderLoader.loadFromFile(path);
+    private static int createShader(String path, int type) {
+        String source = loadFromFile(path);
         int shader = glCreateShader(type);
         glShaderSource(shader, source);
         glCompileShader(shader);
@@ -47,6 +77,4 @@ public class ShaderLoader {
 
         return shader;
     }
-
-
 }

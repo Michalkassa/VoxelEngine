@@ -11,136 +11,116 @@ import org.joml.*;
 
 public class Renderer {
 
-    private int VAO;
-    private int VBO;
-    private int EBO;
-    private int shaderProgram;
-    private int fragmentShader;
-    private int vertexShader;
-    private int texture;
-    private Matrix4f trans;
+    private Shader shader;
+    private Texture texture;
+    private Mesh mesh;
+    private Matrix4f model;
+    private Matrix4f view;
+    private Matrix4f projection;
 
-    private void LoadTexture(String fileName) {
-
-        texture = glGenTextures();
-        glBindTexture(GL_TEXTURE_2D, texture);
-        stbi_set_flip_vertically_on_load(true);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-        // load and generate the texture
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            IntBuffer width = stack.mallocInt(1);
-            IntBuffer height = stack.mallocInt(1);
-            IntBuffer channels = stack.mallocInt(1);
-
-            ByteBuffer imageBuffer = STBImage.stbi_load(
-                   fileName,
-                    width,
-                    height,
-                    channels,
-                    4 // Force RGBA channels
-
-            );
-
-            if (imageBuffer == null) {
-                throw new RuntimeException("Image load failed: " + STBImage.stbi_failure_reason());
-            }
-
-            glTexImage2D(
-                    GL_TEXTURE_2D,
-                    0,
-                    GL_RGBA8,
-                    width.get(0),
-                    height.get(0),
-                    0,
-                    GL_RGBA,
-                    GL_UNSIGNED_BYTE,
-                    imageBuffer
-            );
-            glGenerateMipmap(GL_TEXTURE_2D);
-            STBImage.stbi_image_free(imageBuffer);
-        }
-    }
 
     public void init() {
         float[] vertices = {
-                // pos(x,y,z)       color(r,g,b)      uv(u,v)
-                0.5f,  0.5f, 0.0f,  1.0f, 0.0f, 0.0f,  1.0f, 1.0f,
-                -0.5f,  0.5f, 0.0f,  0.0f, 1.0f, 0.0f,  0.0f, 1.0f,
-                -0.5f, -0.5f, 0.0f,  0.0f, 0.0f, 1.0f,  0.0f, 0.0f,
-                0.5f, -0.5f, 0.0f,  1.0f, 1.0f, 1.0f,  1.0f, 0.0f
+                // Back face (z = -0.5)
+                -0.5f, -0.5f, -0.5f, 0.0f, 0.0f,  // BL
+                0.5f, -0.5f, -0.5f, 1.0f, 0.0f,   // BR
+                0.5f, 0.5f, -0.5f, 1.0f, 1.0f,    // TR
+                0.5f, 0.5f, -0.5f, 1.0f, 1.0f,    // TR
+                -0.5f, 0.5f, -0.5f, 0.0f, 1.0f,   // TL
+                -0.5f, -0.5f, -0.5f, 0.0f, 0.0f,  // BL
+
+                // Front face (z = 0.5)
+                -0.5f, -0.5f, 0.5f, 0.0f, 0.0f,   // BL
+                0.5f, -0.5f, 0.5f, 1.0f, 0.0f,    // BR
+                0.5f, 0.5f, 0.5f, 1.0f, 1.0f,     // TR
+                0.5f, 0.5f, 0.5f, 1.0f, 1.0f,     // TR
+                -0.5f, 0.5f, 0.5f, 0.0f, 1.0f,    // TL
+                -0.5f, -0.5f, 0.5f, 0.0f, 0.0f,   // BL
+
+                // Left face (x = -0.5)
+                -0.5f, -0.5f, -0.5f, 0.0f, 0.0f,  // BL
+                -0.5f, 0.5f, -0.5f, 1.0f, 0.0f,   // TL
+                -0.5f, 0.5f, 0.5f, 1.0f, 1.0f,    // TR
+                -0.5f, 0.5f, 0.5f, 1.0f, 1.0f,    // TR
+                -0.5f, -0.5f, 0.5f, 0.0f, 1.0f,   // BR
+                -0.5f, -0.5f, -0.5f, 0.0f, 0.0f,  // BL
+
+                // Right face (x = 0.5)
+                0.5f, -0.5f, -0.5f, 0.0f, 0.0f,   // BL
+                0.5f, 0.5f, -0.5f, 1.0f, 0.0f,    // TL
+                0.5f, 0.5f, 0.5f, 1.0f, 1.0f,     // TR
+                0.5f, 0.5f, 0.5f, 1.0f, 1.0f,     // TR
+                0.5f, -0.5f, 0.5f, 0.0f, 1.0f,    // BR
+                0.5f, -0.5f, -0.5f, 0.0f, 0.0f,   // BL
+
+                // Bottom face (y = -0.5)
+                -0.5f, -0.5f, -0.5f, 0.0f, 0.0f,  // BL
+                0.5f, -0.5f, -0.5f, 1.0f, 0.0f,   // BR
+                0.5f, -0.5f, 0.5f, 1.0f, 1.0f,    // TR
+                0.5f, -0.5f, 0.5f, 1.0f, 1.0f,    // TR
+                -0.5f, -0.5f, 0.5f, 0.0f, 1.0f,   // TL
+                -0.5f, -0.5f, -0.5f, 0.0f, 0.0f,  // BL
+
+                // Top face (y = 0.5)
+                -0.5f, 0.5f, -0.5f, 0.0f, 0.0f,   // BL
+                0.5f, 0.5f, -0.5f, 1.0f, 0.0f,    // BR
+                0.5f, 0.5f, 0.5f, 1.0f, 1.0f,     // TR
+                0.5f, 0.5f, 0.5f, 1.0f, 1.0f,     // TR
+                -0.5f, 0.5f, 0.5f, 0.0f, 1.0f,    // TL
+                -0.5f, 0.5f, -0.5f, 0.0f, 0.0f    // BL
+
         };
 
 
-        int[] indices = {
-            0,1,2,
-            2,3,0
-        };
+        shader = new Shader("/shaders/vertexShader.glsl","/shaders/fragmentShader.glsl");
+        mesh = new Mesh(vertices, 36);
+        texture = new Texture("/Users/michalkassa/Desktop/VoxelEngine/src/main/resources/images/texture.jpg");
 
-        vertexShader = ShaderLoader.createShader("/shaders/vertexShader.glsl", GL_VERTEX_SHADER);
-        fragmentShader = ShaderLoader.createShader("/shaders/fragmentShader.glsl", GL_FRAGMENT_SHADER);
+        model = new Matrix4f().identity();
+        view = new Matrix4f().identity();
+        projection = new Matrix4f().identity();
 
-        shaderProgram = glCreateProgram();
-        glAttachShader(shaderProgram,vertexShader);
-        glAttachShader(shaderProgram,fragmentShader);
-        glLinkProgram(shaderProgram);
 
-        glDeleteShader(vertexShader);
-        glDeleteShader(fragmentShader);
 
-        EBO = glGenBuffers();
-        VAO = glGenVertexArrays();
-        VBO = glGenBuffers();
+        model.rotate(Math.toRadians(30) , new Vector3f(1f,0f,0f)).normalize3x3();
+        view.translate(new Vector3f(0f,0f,-4));
+        projection.perspective((float)Math.toRadians(45f), 1f, 0.1f, 128f);
 
-        glBindVertexArray(VAO);
-
-        //VBO
-        glBindBuffer(GL_ARRAY_BUFFER,VBO);
-        glBufferData(GL_ARRAY_BUFFER,vertices,GL_STATIC_DRAW);
-
-        //EBO
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices,GL_STATIC_DRAW);
-
-        //vertex attribute layout
-        glVertexAttribPointer(0, 3, GL_FLOAT, false, 8 * Float.BYTES, 0L);
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer(1, 3, GL_FLOAT, false, 8 * Float.BYTES, 3 * Float.BYTES);
-        glEnableVertexAttribArray(1);
-        glVertexAttribPointer(2, 2, GL_FLOAT, false, 8 * Float.BYTES, 6 * Float.BYTES);
-        glEnableVertexAttribArray(2);
-
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-        LoadTexture("/Users/michalkassa/Desktop/VoxelEngine/src/main/resources/images/texture.jpg");
-
-        trans = new Matrix4f().identity();
+        glEnable(GL_DEPTH_TEST);
     }
 
-    public void update(){
-        glClearColor(0.0f,0.0f,0.0f,0.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
-        glUseProgram(shaderProgram);
+    public void update(float deltaTime){
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        trans.rotate((float) Math.toRadians(0.5f), new Vector3f(0f, 1.0f, 1.0f));
-        int transformLoc = glGetUniformLocation(shaderProgram,"transform");
-        float[] arr = new float[16];
-        trans.get(arr);
-        glUniformMatrix4fv(transformLoc, true, arr);
+        shader.bind();
 
-        glBindTexture(GL_TEXTURE_2D, texture);
-        glBindVertexArray(VAO);s
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-        glDrawArrays(GL_TRIANGLES,0,6);
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        model.rotate(Math.toRadians(-55f) * deltaTime , new Vector3f(0f,1f,0f)).normalize3x3();
 
+        int model_transform = glGetUniformLocation(shader.getShaderProgram(),"model_transform");
+        int view_transform = glGetUniformLocation(shader.getShaderProgram(),"view_transform");
+        int projection_transform = glGetUniformLocation(shader.getShaderProgram(),"projection_transform");
+
+        float[] modelarr = new float[16];
+        model.get(modelarr);
+        float[] viewarr = new float[16];
+        view.get(viewarr);
+        float[] projectionarr = new float[16];
+        projection.get(projectionarr);
+
+
+        glUniformMatrix4fv(model_transform, false, modelarr);
+        glUniformMatrix4fv(view_transform, false, viewarr);
+        glUniformMatrix4fv(projection_transform, false, projectionarr);
+
+
+        texture.bind();
+        mesh.draw();
 
     }
 
     public void cleanup(){
-
+        texture.cleanup();
+        mesh.cleanup();
+        shader.cleanup();
     }
 }
