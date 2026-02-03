@@ -18,6 +18,8 @@ public class Game {
 
         renderer = new Renderer();
         renderer.init();
+
+        Input.init(window.getWindowId());
     }
     private void loop(){
         float lastFrameTime = 0;

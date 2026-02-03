@@ -5,6 +5,8 @@ import org.lwjgl.stb.STBImage;
 import org.lwjgl.system.MemoryStack;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
+
+import static org.lwjgl.glfw.GLFW.glfwGetTime;
 import static org.lwjgl.opengl.GL46.*;
 import static org.lwjgl.stb.STBImage.*;
 import org.joml.*;
@@ -17,61 +19,69 @@ public class Renderer {
     private Matrix4f model;
     private Matrix4f view;
     private Matrix4f projection;
+    private Camera camera;
+
+
+    private int model_transform;
+    private int view_transform ;
+    private int  projection_transform;
+
+    private final float[] matBuffer = new float[16];
 
 
     public void init() {
         float[] vertices = {
-                // Back face (z = -0.5)
-                -0.5f, -0.5f, -0.5f, 0.0f, 0.0f,  // BL
-                0.5f, -0.5f, -0.5f, 1.0f, 0.0f,   // BR
-                0.5f, 0.5f, -0.5f, 1.0f, 1.0f,    // TR
-                0.5f, 0.5f, -0.5f, 1.0f, 1.0f,    // TR
-                -0.5f, 0.5f, -0.5f, 0.0f, 1.0f,   // TL
-                -0.5f, -0.5f, -0.5f, 0.0f, 0.0f,  // BL
+                // FRONT FACE (z = 0.5)
+                -0.5f, -0.5f,  0.5f, 0f, 0f,  // BL
+                0.5f, -0.5f,  0.5f, 1f, 0f,  // BR
+                0.5f,  0.5f,  0.5f, 1f, 1f,  // TR
+                0.5f,  0.5f,  0.5f, 1f, 1f,  // TR
+                -0.5f,  0.5f,  0.5f, 0f, 1f,  // TL
+                -0.5f, -0.5f,  0.5f, 0f, 0f,  // BL
 
-                // Front face (z = 0.5)
-                -0.5f, -0.5f, 0.5f, 0.0f, 0.0f,   // BL
-                0.5f, -0.5f, 0.5f, 1.0f, 0.0f,    // BR
-                0.5f, 0.5f, 0.5f, 1.0f, 1.0f,     // TR
-                0.5f, 0.5f, 0.5f, 1.0f, 1.0f,     // TR
-                -0.5f, 0.5f, 0.5f, 0.0f, 1.0f,    // TL
-                -0.5f, -0.5f, 0.5f, 0.0f, 0.0f,   // BL
+                // BACK FACE (z = -0.5)
+                -0.5f, -0.5f, -0.5f, 0f, 0f,  // BL
+                -0.5f,  0.5f, -0.5f, 0f, 1f,  // TL
+                0.5f,  0.5f, -0.5f, 1f, 1f,  // TR
+                0.5f,  0.5f, -0.5f, 1f, 1f,  // TR
+                0.5f, -0.5f, -0.5f, 1f, 0f,  // BR
+                -0.5f, -0.5f, -0.5f, 0f, 0f,  // BL
 
-                // Left face (x = -0.5)
-                -0.5f, -0.5f, -0.5f, 0.0f, 0.0f,  // BL
-                -0.5f, 0.5f, -0.5f, 1.0f, 0.0f,   // TL
-                -0.5f, 0.5f, 0.5f, 1.0f, 1.0f,    // TR
-                -0.5f, 0.5f, 0.5f, 1.0f, 1.0f,    // TR
-                -0.5f, -0.5f, 0.5f, 0.0f, 1.0f,   // BR
-                -0.5f, -0.5f, -0.5f, 0.0f, 0.0f,  // BL
+                // LEFT FACE (x = -0.5)
+                -0.5f, -0.5f, -0.5f, 0f, 0f,  // BL
+                -0.5f, -0.5f,  0.5f, 1f, 0f,  // BR
+                -0.5f,  0.5f,  0.5f, 1f, 1f,  // TR
+                -0.5f,  0.5f,  0.5f, 1f, 1f,  // TR
+                -0.5f,  0.5f, -0.5f, 0f, 1f,  // TL
+                -0.5f, -0.5f, -0.5f, 0f, 0f,  // BL
 
-                // Right face (x = 0.5)
-                0.5f, -0.5f, -0.5f, 0.0f, 0.0f,   // BL
-                0.5f, 0.5f, -0.5f, 1.0f, 0.0f,    // TL
-                0.5f, 0.5f, 0.5f, 1.0f, 1.0f,     // TR
-                0.5f, 0.5f, 0.5f, 1.0f, 1.0f,     // TR
-                0.5f, -0.5f, 0.5f, 0.0f, 1.0f,    // BR
-                0.5f, -0.5f, -0.5f, 0.0f, 0.0f,   // BL
+                // RIGHT FACE (x = 0.5)
+                0.5f, -0.5f,  0.5f, 0f, 0f,  // BL
+                0.5f,  0.5f,  0.5f, 0f, 1f,  // TL
+                0.5f,  0.5f, -0.5f, 1f, 1f,  // TR
+                0.5f,  0.5f, -0.5f, 1f, 1f,  // TR
+                0.5f, -0.5f, -0.5f, 1f, 0f,  // BR
+                0.5f, -0.5f,  0.5f, 0f, 0f,  // BL
 
-                // Bottom face (y = -0.5)
-                -0.5f, -0.5f, -0.5f, 0.0f, 0.0f,  // BL
-                0.5f, -0.5f, -0.5f, 1.0f, 0.0f,   // BR
-                0.5f, -0.5f, 0.5f, 1.0f, 1.0f,    // TR
-                0.5f, -0.5f, 0.5f, 1.0f, 1.0f,    // TR
-                -0.5f, -0.5f, 0.5f, 0.0f, 1.0f,   // TL
-                -0.5f, -0.5f, -0.5f, 0.0f, 0.0f,  // BL
+                // BOTTOM FACE (y = -0.5)
+                -0.5f, -0.5f, -0.5f, 0f, 0f,  // BL
+                0.5f, -0.5f, -0.5f, 1f, 0f,  // BR
+                0.5f, -0.5f,  0.5f, 1f, 1f,  // TR
+                0.5f, -0.5f,  0.5f, 1f, 1f,  // TR
+                -0.5f, -0.5f,  0.5f, 0f, 1f,  // TL
+                -0.5f, -0.5f, -0.5f, 0f, 0f,  // BL
 
-                // Top face (y = 0.5)
-                -0.5f, 0.5f, -0.5f, 0.0f, 0.0f,   // BL
-                0.5f, 0.5f, -0.5f, 1.0f, 0.0f,    // BR
-                0.5f, 0.5f, 0.5f, 1.0f, 1.0f,     // TR
-                0.5f, 0.5f, 0.5f, 1.0f, 1.0f,     // TR
-                -0.5f, 0.5f, 0.5f, 0.0f, 1.0f,    // TL
-                -0.5f, 0.5f, -0.5f, 0.0f, 0.0f    // BL
-
+                // TOP FACE (y = 0.5)
+                -0.5f,  0.5f, -0.5f, 0f, 0f,  // BL
+                -0.5f,  0.5f,  0.5f, 0f, 1f,  // TL
+                0.5f,  0.5f,  0.5f, 1f, 1f,  // TR
+                0.5f,  0.5f,  0.5f, 1f, 1f,  // TR
+                0.5f,  0.5f, -0.5f, 1f, 0f,  // BR
+                -0.5f,  0.5f, -0.5f, 0f, 0f   // BL
         };
 
 
+        camera = new Camera(new Vector3f(0,0,4), new Vector3f(0,0,0));
         shader = new Shader("/shaders/vertexShader.glsl","/shaders/fragmentShader.glsl");
         mesh = new Mesh(vertices, 36);
         texture = new Texture("/Users/michalkassa/Desktop/VoxelEngine/src/main/resources/images/texture.jpg");
@@ -81,36 +91,27 @@ public class Renderer {
         projection = new Matrix4f().identity();
 
 
+        model_transform = glGetUniformLocation(shader.getShaderProgram(), "model_transform");
+        view_transform = glGetUniformLocation(shader.getShaderProgram(), "view_transform");
+        projection_transform = glGetUniformLocation(shader.getShaderProgram(), "projection_transform");
 
-        model.rotate(Math.toRadians(30) , new Vector3f(1f,0f,0f)).normalize3x3();
-        view.translate(new Vector3f(0f,0f,-4));
         projection.perspective((float)Math.toRadians(45f), 1f, 0.1f, 128f);
 
         glEnable(GL_DEPTH_TEST);
     }
 
-    public void update(float deltaTime){
+    public void update(float dt){
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
+        camera.update(dt);
         shader.bind();
 
-        model.rotate(Math.toRadians(-55f) * deltaTime , new Vector3f(0f,1f,0f)).normalize3x3();
+        camera.getViewMatrix(view);
 
-        int model_transform = glGetUniformLocation(shader.getShaderProgram(),"model_transform");
-        int view_transform = glGetUniformLocation(shader.getShaderProgram(),"view_transform");
-        int projection_transform = glGetUniformLocation(shader.getShaderProgram(),"projection_transform");
+        //model.rotate(Math.toRadians(-55f) * deltaTime , new Vector3f(0f,1f,0f)).normalize3x3();
 
-        float[] modelarr = new float[16];
-        model.get(modelarr);
-        float[] viewarr = new float[16];
-        view.get(viewarr);
-        float[] projectionarr = new float[16];
-        projection.get(projectionarr);
-
-
-        glUniformMatrix4fv(model_transform, false, modelarr);
-        glUniformMatrix4fv(view_transform, false, viewarr);
-        glUniformMatrix4fv(projection_transform, false, projectionarr);
+        glUniformMatrix4fv(model_transform, false, model.get(matBuffer));
+        glUniformMatrix4fv(view_transform, false, view.get(matBuffer));
+        glUniformMatrix4fv(projection_transform, false, projection.get(matBuffer));
 
 
         texture.bind();

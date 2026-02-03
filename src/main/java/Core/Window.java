@@ -25,6 +25,8 @@ public class Window {
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
         WINDOW_ID = glfwCreateWindow(WIDTH, HEIGHT, TITLE, 0, 0);
+
+        glfwSetInputMode(WINDOW_ID, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     }
 
     public void update(){
