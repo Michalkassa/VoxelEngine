@@ -1,5 +1,6 @@
 package Core;
 
+import World.Chunk;
 import org.joml.Math;
 import org.lwjgl.stb.STBImage;
 import org.lwjgl.system.MemoryStack;
@@ -15,11 +16,11 @@ public class Renderer {
 
     private Shader shader;
     private Texture texture;
-    private Mesh mesh;
     private Matrix4f model;
     private Matrix4f view;
     private Matrix4f projection;
     private Camera camera;
+    private Chunk chunk;
 
 
     private int model_transform;
@@ -30,65 +31,15 @@ public class Renderer {
 
 
     public void init() {
-        float[] vertices = {
-                // FRONT FACE (z = 0.5)
-                -0.5f, -0.5f,  0.5f, 0f, 0f,  // BL
-                0.5f, -0.5f,  0.5f, 1f, 0f,  // BR
-                0.5f,  0.5f,  0.5f, 1f, 1f,  // TR
-                0.5f,  0.5f,  0.5f, 1f, 1f,  // TR
-                -0.5f,  0.5f,  0.5f, 0f, 1f,  // TL
-                -0.5f, -0.5f,  0.5f, 0f, 0f,  // BL
 
-                // BACK FACE (z = -0.5)
-                -0.5f, -0.5f, -0.5f, 0f, 0f,  // BL
-                -0.5f,  0.5f, -0.5f, 0f, 1f,  // TL
-                0.5f,  0.5f, -0.5f, 1f, 1f,  // TR
-                0.5f,  0.5f, -0.5f, 1f, 1f,  // TR
-                0.5f, -0.5f, -0.5f, 1f, 0f,  // BR
-                -0.5f, -0.5f, -0.5f, 0f, 0f,  // BL
-
-                // LEFT FACE (x = -0.5)
-                -0.5f, -0.5f, -0.5f, 0f, 0f,  // BL
-                -0.5f, -0.5f,  0.5f, 1f, 0f,  // BR
-                -0.5f,  0.5f,  0.5f, 1f, 1f,  // TR
-                -0.5f,  0.5f,  0.5f, 1f, 1f,  // TR
-                -0.5f,  0.5f, -0.5f, 0f, 1f,  // TL
-                -0.5f, -0.5f, -0.5f, 0f, 0f,  // BL
-
-                // RIGHT FACE (x = 0.5)
-                0.5f, -0.5f,  0.5f, 0f, 0f,  // BL
-                0.5f,  0.5f,  0.5f, 0f, 1f,  // TL
-                0.5f,  0.5f, -0.5f, 1f, 1f,  // TR
-                0.5f,  0.5f, -0.5f, 1f, 1f,  // TR
-                0.5f, -0.5f, -0.5f, 1f, 0f,  // BR
-                0.5f, -0.5f,  0.5f, 0f, 0f,  // BL
-
-                // BOTTOM FACE (y = -0.5)
-                -0.5f, -0.5f, -0.5f, 0f, 0f,  // BL
-                0.5f, -0.5f, -0.5f, 1f, 0f,  // BR
-                0.5f, -0.5f,  0.5f, 1f, 1f,  // TR
-                0.5f, -0.5f,  0.5f, 1f, 1f,  // TR
-                -0.5f, -0.5f,  0.5f, 0f, 1f,  // TL
-                -0.5f, -0.5f, -0.5f, 0f, 0f,  // BL
-
-                // TOP FACE (y = 0.5)
-                -0.5f,  0.5f, -0.5f, 0f, 0f,  // BL
-                -0.5f,  0.5f,  0.5f, 0f, 1f,  // TL
-                0.5f,  0.5f,  0.5f, 1f, 1f,  // TR
-                0.5f,  0.5f,  0.5f, 1f, 1f,  // TR
-                0.5f,  0.5f, -0.5f, 1f, 0f,  // BR
-                -0.5f,  0.5f, -0.5f, 0f, 0f   // BL
-        };
-
-
-        camera = new Camera(new Vector3f(0,0,4), new Vector3f(0,0,0));
+        camera = new Camera(new Vector3f(0,1,0), new Vector3f(0,0,0));
         shader = new Shader("/shaders/vertexShader.glsl","/shaders/fragmentShader.glsl");
-        mesh = new Mesh(vertices, 36);
         texture = new Texture("/Users/michalkassa/Desktop/VoxelEngine/src/main/resources/images/texture.jpg");
 
         model = new Matrix4f().identity();
         view = new Matrix4f().identity();
         projection = new Matrix4f().identity();
+        chunk = new Chunk(new Vector3f(0,0,0));
 
 
         model_transform = glGetUniformLocation(shader.getShaderProgram(), "model_transform");
@@ -113,15 +64,14 @@ public class Renderer {
         glUniformMatrix4fv(view_transform, false, view.get(matBuffer));
         glUniformMatrix4fv(projection_transform, false, projection.get(matBuffer));
 
-
+        chunk.render();
         texture.bind();
-        mesh.draw();
 
     }
 
     public void cleanup(){
         texture.cleanup();
-        mesh.cleanup();
+        chunk.cleanup();
         shader.cleanup();
     }
 }
