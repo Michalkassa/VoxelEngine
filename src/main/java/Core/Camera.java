@@ -30,10 +30,6 @@ public class Camera {
         this.right = new Vector3f();
     }
 
-    public void setTarget(Vector3f target){
-        this.target = target;
-    }
-
     private void movement(float dt){
 
         if (Input.isKeyDown(GLFW_KEY_W)){

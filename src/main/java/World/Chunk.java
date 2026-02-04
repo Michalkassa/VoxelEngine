@@ -11,8 +11,8 @@ public class Chunk {
     private Mesh ChunkMesh;
     private Vector3f chunkPosition;
 
-    private int width;
-    private int height;
+    public static final int CHUNK_SIZE = 16;
+    public static final int CHUNK_HEIGHT = 128;
 
     private static final float[] CUBE = {
             // FRONT FACE (z = 0.5)
@@ -68,26 +68,50 @@ public class Chunk {
 
     public Chunk(Vector3f position){
         this.chunkPosition = position;
-        this.width = 16;
-        this.height = 128;
-        this.blocks = new byte[width][height][width];
+        this.blocks = new byte[CHUNK_SIZE][CHUNK_HEIGHT][CHUNK_SIZE];
         generateBlocks();
         buildMesh();
     }
 
-//    public byte publicGetBlock(Vector3f position){
-//        return
-//    }
+    public byte getBlock(int x, int y, int z){
+        if(x > CHUNK_SIZE || x < 0){
+            return  0;
+        }
+        if(y > CHUNK_HEIGHT || y < 0){
+            return 0;
+        }
+        if(z > CHUNK_SIZE || z < 0){
+            return 0;
+        }
 
-    public void setBlock(Vector3f position, byte blockId){
+        return blocks[x][y][z];
+    }
 
+    public static int worldToLocalX(int worldX) {
+        int localX = worldX % CHUNK_SIZE;
+        if(localX < 0) localX += CHUNK_SIZE;
+        return localX;
+    }
+
+    public static int worldToLocalZ(int worldZ) {
+        int localZ = worldZ % CHUNK_SIZE;
+        if(localZ < 0) localZ += CHUNK_SIZE;
+        return localZ;
+    }
+
+    public static int worldToChunkX(int worldX) {
+        return Math.floorDiv(worldX, CHUNK_SIZE);
+    }
+
+    public static int worldToChunkZ(int worldZ) {
+        return Math.floorDiv(worldZ, CHUNK_SIZE);
     }
 
      private void generateBlocks(){
 
-        for(int x = 0 ; x < width; x++){
-            for(int y = 0 ; y < height; y++){
-                for(int z = 0 ; z < width; z++){
+        for(int x = 0 ; x < CHUNK_SIZE; x++){
+            for(int y = 0 ; y < CHUNK_HEIGHT; y++){
+                for(int z = 0 ; z < CHUNK_SIZE; z++){
                     if(y < 1){
                         blocks[x][y][z] = 1;
                     }
@@ -99,13 +123,13 @@ public class Chunk {
     private void buildMesh(){
         vertices = new ArrayList<>();
 
-        float worldX =  chunkPosition.x * width;
-        float worldY = chunkPosition.y * height;
-        float worldZ = chunkPosition.z * width;
+        float worldX =  chunkPosition.x * CHUNK_SIZE;
+        float worldY = chunkPosition.y * CHUNK_HEIGHT;
+        float worldZ = chunkPosition.z * CHUNK_SIZE;
 
-        for(int x = 0 ; x < width; x++){
-            for(int y = 0 ; y < height; y++){
-                for(int z = 0 ; z < width; z++){
+        for(int x = 0 ; x < CHUNK_SIZE; x++){
+            for(int y = 0 ; y < CHUNK_HEIGHT; y++){
+                for(int z = 0 ; z < CHUNK_SIZE; z++){
                     if(blocks[x][y][z] != 0){
                         addBlock(new Vector3f(x + worldX,y + worldY, z + worldZ));
                     }
