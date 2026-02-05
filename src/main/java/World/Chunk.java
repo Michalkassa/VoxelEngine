@@ -75,13 +75,13 @@ public class Chunk {
 
     public byte getBlock(int x, int y, int z){
         if(x > CHUNK_SIZE || x < 0){
-            return  0;
+            throw new RuntimeException("Accessing x coordinate outside the chunk");
         }
         if(y > CHUNK_HEIGHT || y < 0){
-            return 0;
+            throw new RuntimeException("Accessing y coordinate outside the chunk");
         }
         if(z > CHUNK_SIZE || z < 0){
-            return 0;
+            throw new RuntimeException("Accessing z coordinate outside the chunk");
         }
 
         return blocks[x][y][z];
