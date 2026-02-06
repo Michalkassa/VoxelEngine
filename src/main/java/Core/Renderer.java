@@ -1,5 +1,6 @@
 package Core;
 
+import Entity.TestEntity;
 import World.Chunk;
 import org.joml.Math;
 import org.lwjgl.stb.STBImage;
@@ -21,6 +22,7 @@ public class Renderer {
     private Matrix4f projection;
     private Camera camera;
     private Chunk chunk;
+    private TestEntity test;
 
 
     private int model_transform;
@@ -39,8 +41,6 @@ public class Renderer {
         model = new Matrix4f().identity();
         view = new Matrix4f().identity();
         projection = new Matrix4f().identity();
-        chunk = new Chunk(new Vector3f(0,0,0));
-
 
         model_transform = glGetUniformLocation(shader.getShaderProgram(), "model_transform");
         view_transform = glGetUniformLocation(shader.getShaderProgram(), "view_transform");
@@ -48,12 +48,18 @@ public class Renderer {
 
         projection.perspective((float)Math.toRadians(45f), 1f, 0.1f, 128f);
 
+
+        //OBJECTS
+        chunk = new Chunk(new Vector3f(0,0,0));
+        test = new TestEntity(new Vector3f(1,5,1));
+
         glEnable(GL_DEPTH_TEST);
     }
 
     public void update(float dt){
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         camera.update(dt);
+        test.update(dt, chunk);
         shader.bind();
 
         camera.getViewMatrix(view);
@@ -64,14 +70,24 @@ public class Renderer {
         glUniformMatrix4fv(view_transform, false, view.get(matBuffer));
         glUniformMatrix4fv(projection_transform, false, projection.get(matBuffer));
 
-        chunk.render();
+
         texture.bind();
+
+
+        model.identity().translate(test.getPosition());
+        glUniformMatrix4fv(model_transform, false, model.get(matBuffer));
+        test.render();
+
+        model.identity();
+        glUniformMatrix4fv(model_transform, false, model.get(matBuffer));
+        chunk.render();
 
     }
 
     public void cleanup(){
         texture.cleanup();
         chunk.cleanup();
+        test.cleanup();
         shader.cleanup();
     }
 }

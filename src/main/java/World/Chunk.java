@@ -63,6 +63,7 @@ public class Chunk {
             0.5f,  0.5f, -0.5f, 1f, 0f,  // BR
             -0.5f,  0.5f, -0.5f, 0f, 0f   // BL
     };
+
     private ArrayList<Float> vertices;
 
 
