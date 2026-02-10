@@ -36,7 +36,6 @@ public class Texture {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-        // load and generate the texture
         try (MemoryStack stack = MemoryStack.stackPush()) {
             IntBuffer width = stack.mallocInt(1);
             IntBuffer height = stack.mallocInt(1);
@@ -47,7 +46,7 @@ public class Texture {
                     width,
                     height,
                     channels,
-                    4 // Force RGBA channels
+                    4
 
             );
             if (imageBuffer == null) {

@@ -10,7 +10,6 @@ public class Collider {
        this.transform = transform;
     }
 
-    //using AABB due to non-rotating collider boxes
     public static boolean collidersColliding(Collider collider1, Collider collider2) {
 
         float maxX1 = collider1.transform.position.x + collider1.transform.scale.x / 2;

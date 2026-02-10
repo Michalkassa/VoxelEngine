@@ -58,27 +58,21 @@ public class TestEntity extends Entity{
 
         ArrayList<Float> v = new ArrayList<>();
 
-        // BODY (0.5 × 0.75 × 0.25)
         addCuboid(v, 0f, 0f, 0f,
                 0.25f, 0.375f, 0.125f);
 
-// HEAD (0.5 × 0.5 × 0.5)
         addCuboid(v, 0f, 0.625f, 0f,
                 0.25f, 0.25f, 0.25f);
 
-// LEFT ARM (0.25 × 0.75 × 0.25)
         addCuboid(v, -0.375f, 0f, 0f,
                 0.125f, 0.375f, 0.125f);
 
-// RIGHT ARM
         addCuboid(v,  0.375f, 0f, 0f,
                 0.125f, 0.375f, 0.125f);
 
-// LEFT LEG (0.25 × 0.75 × 0.25)
         addCuboid(v, -0.125f, -0.75f, 0f,
                 0.125f, 0.375f, 0.125f);
 
-// RIGHT LEG
         addCuboid(v,  0.125f, -0.75f, 0f,
                 0.125f, 0.375f, 0.125f);
 
