@@ -36,7 +36,7 @@ public class Renderer {
 
         camera = new Camera(new Vector3f(0,1,0), new Vector3f(0,0,0));
         shader = new Shader("/shaders/vertexShader.glsl","/shaders/fragmentShader.glsl");
-        texture = new Texture("/Users/michalkassa/Desktop/VoxelEngine/src/main/resources/images/texture.jpg");
+        texture = new Texture("/Users/michalkassa/Desktop/VoxelEngine/src/main/resources/images/texture.png");
 
         model = new Matrix4f().identity();
         view = new Matrix4f().identity();

@@ -1,6 +1,7 @@
 package World;
 
 import Core.Mesh;
+import Core.TextureAtlas;
 import org.joml.Vector3f;
 import org.joml.Vector3i;
 
@@ -16,60 +17,64 @@ public class Chunk {
     public static final int CHUNK_SIZE = 16;
     public static final int CHUNK_HEIGHT = 128;
 
-    private static final float[] CUBE_TOP_FACE = {
-            -0.5f,  0.5f, -0.5f, 0f, 0f,  // BL
-            -0.5f,  0.5f,  0.5f, 0f, 1f,  // TL
-            0.5f,  0.5f,  0.5f, 1f, 1f,  // TR
-            0.5f,  0.5f,  0.5f, 1f, 1f,  // TR
-            0.5f,  0.5f, -0.5f, 1f, 0f,  // BR
-            -0.5f,  0.5f, -0.5f, 0f, 0f   // BL
-    };
-    private static final float[] CUBE_BOTTOM_FACE = {
-            -0.5f, -0.5f, -0.5f, 0f, 0f,  // BL
-            0.5f, -0.5f, -0.5f, 1f, 0f,  // BR
-            0.5f, -0.5f,  0.5f, 1f, 1f,  // TR
-            0.5f, -0.5f,  0.5f, 1f, 1f,  // TR
-            -0.5f, -0.5f,  0.5f, 0f, 1f,  // TL
-            -0.5f, -0.5f, -0.5f, 0f, 0f,  // BL
+    private float[][] topTextureMapping;
+    private float[][] bottomTextureMapping;
+    private float[][] sideTextureMapping;
+
+    private static final float[][] CUBE_TOP_FACE = {
+            { -0.5f,  0.5f, -0.5f },  // BL (looking down at top)
+            { -0.5f,  0.5f,  0.5f },  // TL
+            {  0.5f,  0.5f,  0.5f },  // TR
+            {  0.5f,  0.5f,  0.5f },  // TR
+            {  0.5f,  0.5f, -0.5f },  // BR
+            { -0.5f,  0.5f, -0.5f }   // BL
     };
 
-    private static final float[] CUBE_NORTH_FACE = {
-            0.5f, -0.5f,  0.5f, 0f, 0f,  // BL
-            0.5f,  0.5f,  0.5f, 0f, 1f,  // TL
-            0.5f,  0.5f, -0.5f, 1f, 1f,  // TR
-            0.5f,  0.5f, -0.5f, 1f, 1f,  // TR
-            0.5f, -0.5f, -0.5f, 1f, 0f,  // BR
-            0.5f, -0.5f,  0.5f, 0f, 0f,  // BL
-    };
-    private static final float[] CUBE_SOUTH_FACE = {
-            -0.5f, -0.5f, -0.5f, 0f, 0f,  // BL
-            -0.5f, -0.5f,  0.5f, 1f, 0f,  // BR
-            -0.5f,  0.5f,  0.5f, 1f, 1f,  // TR
-            -0.5f,  0.5f,  0.5f, 1f, 1f,  // TR
-            -0.5f,  0.5f, -0.5f, 0f, 1f,  // TL
-            -0.5f, -0.5f, -0.5f, 0f, 0f,  // BL
+    private static final float[][] CUBE_BOTTOM_FACE = {
+            { -0.5f, -0.5f,  0.5f },  // BL (looking up at bottom)
+            { -0.5f, -0.5f, -0.5f },  // TL
+            {  0.5f, -0.5f, -0.5f },  // TR
+            {  0.5f, -0.5f, -0.5f },  // TR
+            {  0.5f, -0.5f,  0.5f },  // BR
+            { -0.5f, -0.5f,  0.5f }   // BL
     };
 
-    private static final float[] CUBE_EAST_FACE = {
-            -0.5f, -0.5f,  0.5f, 0f, 0f,  // BL
-            0.5f, -0.5f,  0.5f, 1f, 0f,  // BR
-            0.5f,  0.5f,  0.5f, 1f, 1f,  // TR
-            0.5f,  0.5f,  0.5f, 1f, 1f,  // TR
-            -0.5f,  0.5f,  0.5f, 0f, 1f,  // TL
-            -0.5f, -0.5f,  0.5f, 0f, 0f,  // BL
+    private static final float[][] CUBE_NORTH_FACE = {
+            {  0.5f, -0.5f,  0.5f },  // BL (facing +X direction)
+            {  0.5f,  0.5f,  0.5f },  // TL
+            {  0.5f,  0.5f, -0.5f },  // TR
+            {  0.5f,  0.5f, -0.5f },  // TR
+            {  0.5f, -0.5f, -0.5f },  // BR
+            {  0.5f, -0.5f,  0.5f }   // BL
     };
 
-
-
-    private static final float[] CUBE_WEST_FACE = {
-            -0.5f, -0.5f, -0.5f, 0f, 0f,  // BL
-            -0.5f,  0.5f, -0.5f, 0f, 1f,  // TL
-            0.5f,  0.5f, -0.5f, 1f, 1f,  // TR
-            0.5f,  0.5f, -0.5f, 1f, 1f,  // TR
-            0.5f, -0.5f, -0.5f, 1f, 0f,  // BR
-            -0.5f, -0.5f, -0.5f, 0f, 0f,  // BL
-
+    private static final float[][] CUBE_SOUTH_FACE = {
+            { -0.5f, -0.5f, -0.5f },  // BL (facing -X direction)
+            { -0.5f,  0.5f, -0.5f },  // TL
+            { -0.5f,  0.5f,  0.5f },  // TR
+            { -0.5f,  0.5f,  0.5f },  // TR
+            { -0.5f, -0.5f,  0.5f },  // BR
+            { -0.5f, -0.5f, -0.5f }   // BL
     };
+
+    private static final float[][] CUBE_EAST_FACE = {
+            { -0.5f, -0.5f,  0.5f },  // BL (facing +Z direction)
+            { -0.5f,  0.5f,  0.5f },  // TL
+            {  0.5f,  0.5f,  0.5f },  // TR
+            {  0.5f,  0.5f,  0.5f },  // TR
+            {  0.5f, -0.5f,  0.5f },  // BR
+            { -0.5f, -0.5f,  0.5f }   // BL
+    };
+
+    private static final float[][] CUBE_WEST_FACE = {
+            {  0.5f, -0.5f, -0.5f },  // BL (facing -Z direction)
+            {  0.5f,  0.5f, -0.5f },  // TL
+            { -0.5f,  0.5f, -0.5f },  // TR
+            { -0.5f,  0.5f, -0.5f },  // TR
+            { -0.5f, -0.5f, -0.5f },  // BR
+            {  0.5f, -0.5f, -0.5f }   // BL
+    };
+
 
     private ArrayList<Float> vertices;
 
@@ -139,6 +144,10 @@ public class Chunk {
             for(int y = 0 ; y < CHUNK_HEIGHT; y++){
                 for(int z = 0 ; z < CHUNK_SIZE; z++){
                     if(blocks[x][y][z] != 0){
+                        //TEMPORARY , TODO fix
+                        topTextureMapping = TextureAtlas.topTextureMapping(TextureAtlas.BlockTextures.GRASS);
+                        bottomTextureMapping = TextureAtlas.bottomTextureMapping(TextureAtlas.BlockTextures.GRASS);;
+                        sideTextureMapping = TextureAtlas.sideTextureMapping(TextureAtlas.BlockTextures.GRASS);;
                         addBlock(new Vector3f(x + worldX,y + worldY, z + worldZ), new Vector3i(x,y,z));
                     }
                 }
@@ -162,72 +171,73 @@ public class Chunk {
         int z = relativeChunkPosition.z;
 
         if (y < CHUNK_HEIGHT && blocks[x][y+1][z] == 0){
-            for (int i = 0; i < CUBE_TOP_FACE.length; i += 5) {
-                vertices.add(CUBE_TOP_FACE[i]     + position.x);
-                vertices.add(CUBE_TOP_FACE[i + 1] + position.y);
-                vertices.add(CUBE_TOP_FACE[i + 2] + position.z);
+            for (int i = 0; i < CUBE_TOP_FACE.length; i++) {
+                vertices.add(CUBE_TOP_FACE[i][0] + position.x);
+                vertices.add(CUBE_TOP_FACE[i][1] + position.y);
+                vertices.add(CUBE_TOP_FACE[i][2] + position.z);
 
-                vertices.add(CUBE_TOP_FACE[i + 3]);
-                vertices.add(CUBE_TOP_FACE[i + 4]);
+                vertices.add(topTextureMapping[i][0]);
+                vertices.add(topTextureMapping[i][1]);
             }
         }
 
         if (y == 0 || (y > 0 && blocks[x][y-1][z] == 0)){
-            for (int i = 0; i < CUBE_BOTTOM_FACE.length; i += 5) {
-                vertices.add(CUBE_BOTTOM_FACE[i]     + position.x);
-                vertices.add(CUBE_BOTTOM_FACE[i + 1] + position.y);
-                vertices.add(CUBE_BOTTOM_FACE[i + 2] + position.z);
+            for (int i = 0; i < CUBE_BOTTOM_FACE.length; i++) {
+                vertices.add(CUBE_BOTTOM_FACE[i][0] + position.x);
+                vertices.add(CUBE_BOTTOM_FACE[i][1] + position.y);
+                vertices.add(CUBE_BOTTOM_FACE[i][2] + position.z);
 
-                vertices.add(CUBE_BOTTOM_FACE[i + 3]);
-                vertices.add(CUBE_BOTTOM_FACE[i + 4]);
+                vertices.add(bottomTextureMapping[i][0]);
+                vertices.add(bottomTextureMapping[i][1]);
             }
         }
 
         if (x < CHUNK_SIZE && blocks[x+1][y][z] == 0){
-            for (int i = 0; i < CUBE_NORTH_FACE.length; i += 5) {
-                vertices.add(CUBE_NORTH_FACE[i]     + position.x);
-                vertices.add(CUBE_NORTH_FACE[i + 1] + position.y);
-                vertices.add(CUBE_NORTH_FACE[i + 2] + position.z);
+            for (int i = 0; i < CUBE_NORTH_FACE.length; i++) {
+                vertices.add(CUBE_NORTH_FACE[i][0] + position.x);
+                vertices.add(CUBE_NORTH_FACE[i][1] + position.y);
+                vertices.add(CUBE_NORTH_FACE[i][2] + position.z);
 
-                vertices.add(CUBE_NORTH_FACE[i + 3]);
-                vertices.add(CUBE_NORTH_FACE[i + 4]);
+                vertices.add(sideTextureMapping[i][0]);
+                vertices.add(sideTextureMapping[i][1]);
             }
         }
 
         if (x == 0 || (x > 0 && blocks[x-1][y][z] == 0)){
-            for (int i = 0; i < CUBE_SOUTH_FACE.length; i += 5) {
-                vertices.add(CUBE_SOUTH_FACE[i]     + position.x);
-                vertices.add(CUBE_SOUTH_FACE[i + 1] + position.y);
-                vertices.add(CUBE_SOUTH_FACE[i + 2] + position.z);
+            for (int i = 0; i < CUBE_SOUTH_FACE.length; i++) {
+                vertices.add(CUBE_SOUTH_FACE[i][0] + position.x);
+                vertices.add(CUBE_SOUTH_FACE[i][1] + position.y);
+                vertices.add(CUBE_SOUTH_FACE[i][2] + position.z);
 
-                vertices.add(CUBE_SOUTH_FACE[i + 3]);
-                vertices.add(CUBE_SOUTH_FACE[i + 4]);
+                vertices.add(sideTextureMapping[i][0]);
+                vertices.add(sideTextureMapping[i][1]);
             }
         }
 
         if (z < CHUNK_SIZE && blocks[x][y][z+1] == 0){
-            for (int i = 0; i < CUBE_EAST_FACE.length; i += 5) {
-                vertices.add(CUBE_EAST_FACE[i]     + position.x);
-                vertices.add(CUBE_EAST_FACE[i + 1] + position.y);
-                vertices.add(CUBE_EAST_FACE[i + 2] + position.z);
+            for (int i = 0; i < CUBE_EAST_FACE.length; i++) {
+                vertices.add(CUBE_EAST_FACE[i][0] + position.x);
+                vertices.add(CUBE_EAST_FACE[i][1] + position.y);
+                vertices.add(CUBE_EAST_FACE[i][2] + position.z);
 
-                vertices.add(CUBE_EAST_FACE[i + 3]);
-                vertices.add(CUBE_EAST_FACE[i + 4]);
+                vertices.add(sideTextureMapping[i][0]);
+                vertices.add(sideTextureMapping[i][1]);
             }
         }
 
         if (z == 0 || (z > 0 && blocks[x][y][z-1] == 0)) {
 
-            for (int i = 0; i < CUBE_WEST_FACE.length; i += 5) {
-                vertices.add(CUBE_WEST_FACE[i] + position.x);
-                vertices.add(CUBE_WEST_FACE[i + 1] + position.y);
-                vertices.add(CUBE_WEST_FACE[i + 2] + position.z);
+            for (int i = 0; i < CUBE_WEST_FACE.length; i++) {
+                vertices.add(CUBE_WEST_FACE[i][0] + position.x);
+                vertices.add(CUBE_WEST_FACE[i][1] + position.y);
+                vertices.add(CUBE_WEST_FACE[i][2] + position.z);
 
-                vertices.add(CUBE_WEST_FACE[i + 3]);
-                vertices.add(CUBE_WEST_FACE[i + 4]);
+                vertices.add(sideTextureMapping[i][0]);
+                vertices.add(sideTextureMapping[i][1]);
             }
         }
     }
+
 
     public void render(){
         ChunkMesh.draw();
