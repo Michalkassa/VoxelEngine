@@ -10,7 +10,7 @@ public class Game {
     private Renderer renderer;
 
     private void init(){
-        window = new Window(720,720, "VoxelEngine");
+        window = new Window(1920,1080, "VoxelEngine");
         window.create();
 
         glfwMakeContextCurrent(window.getWindowId());

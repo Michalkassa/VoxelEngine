@@ -3,6 +3,7 @@ package Core;
 import Entity.TestEntity;
 import World.Chunk;
 import org.joml.Math;
+import org.lwjgl.glfw.GLFW;
 import org.lwjgl.stb.STBImage;
 import org.lwjgl.system.MemoryStack;
 import java.nio.ByteBuffer;
@@ -46,7 +47,13 @@ public class Renderer {
         view_transform = glGetUniformLocation(shader.getShaderProgram(), "view_transform");
         projection_transform = glGetUniformLocation(shader.getShaderProgram(), "projection_transform");
 
-        projection.perspective((float)Math.toRadians(45f), 1f, 0.1f, 128f);
+        int[] width = new int[1];
+        int[] height = new int[1];
+        GLFW.glfwGetWindowSize(GLFW.glfwGetCurrentContext(), width, height);
+
+        float aspect_ratio = (float) width[0] / height[0];
+
+        projection.perspective((float)Math.toRadians(80f), aspect_ratio, 0.1f, 512f);
 
 
         //OBJECTS

@@ -7,6 +7,7 @@ import org.joml.Vector3i;
 
 
 import java.util.ArrayList;
+import java.util.Random;
 
 public class Chunk {
 
@@ -14,8 +15,8 @@ public class Chunk {
     private Mesh ChunkMesh;
     private Vector3f chunkPosition;
 
-    public static final int CHUNK_SIZE = 16;
-    public static final int CHUNK_HEIGHT = 128;
+    public static final int CHUNK_SIZE = 256;
+    public static final int CHUNK_HEIGHT = 256;
 
     private float[][] topTextureMapping;
     private float[][] bottomTextureMapping;
@@ -100,33 +101,24 @@ public class Chunk {
         return blocks[x][y][z];
     }
 
-    public static int worldToLocalX(int worldX) {
-        int localX = worldX % CHUNK_SIZE;
-        if(localX < 0) localX += CHUNK_SIZE;
-        return localX;
-    }
+    private void generateBlocks(){
+        for(int x = 0; x < CHUNK_SIZE; x++){
+            for(int z = 0; z < CHUNK_SIZE; z++){
+                double noise = Math.sin(x * 0.05) * Math.cos(z * 0.05)
+                        + Math.sin(x * 0.03) * Math.cos(z * 0.03) * 0.5;
 
-    public static int worldToLocalZ(int worldZ) {
-        int localZ = worldZ % CHUNK_SIZE;
-        if(localZ < 0) localZ += CHUNK_SIZE;
-        return localZ;
-    }
+                noise = (noise + 1.5) / 3;
+                noise = Math.max(0, Math.min(1, noise));
 
-    public static int worldToChunkX(int worldX) {
-        return Math.floorDiv(worldX, CHUNK_SIZE);
-    }
+                noise = noise * noise * noise;
 
-    public static int worldToChunkZ(int worldZ) {
-        return Math.floorDiv(worldZ, CHUNK_SIZE);
-    }
+                double height = noise * 60 + 5;
 
-     private void generateBlocks(){
-
-        for(int x = 0 ; x < CHUNK_SIZE; x++){
-            for(int y = 0 ; y < CHUNK_HEIGHT; y++){
-                for(int z = 0 ; z < CHUNK_SIZE; z++){
-                    if(y < 1){
+                for(int y = 0; y < CHUNK_HEIGHT; y++){
+                    if(y < height){
                         blocks[x][y][z] = 1;
+                    } else {
+                        blocks[x][y][z] = 0;
                     }
                 }
             }
@@ -238,6 +230,24 @@ public class Chunk {
         }
     }
 
+    public void setBlock(Vector3i relative_chunk_position, byte block_type){
+        int x = relative_chunk_position.x;
+        int y = relative_chunk_position.y;
+        int z = relative_chunk_position.z;
+
+        if(x > CHUNK_SIZE || x < 0){
+            throw new RuntimeException("Accessing x coordinate outside the chunk");
+        }
+        if(y > CHUNK_HEIGHT || y < 0){
+            throw new RuntimeException("Accessing y coordinate outside the chunk");
+        }
+        if(z > CHUNK_SIZE || z < 0){
+            throw new RuntimeException("Accessing z coordinate outside the chunk");
+        }
+
+        blocks[x][y][z] = block_type;
+        buildMesh();
+    }
 
     public void render(){
         ChunkMesh.draw();
