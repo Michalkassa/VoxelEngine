@@ -65,6 +65,9 @@ public class Renderer {
         test = new TestEntity(new Vector3f(1,5,1));
 
         glEnable(GL_DEPTH_TEST);
+        glEnable(GL_CULL_FACE);
+        glCullFace(GL_BACK);
+        glFrontFace(GL_CCW);
     }
 
     public void update(float dt){

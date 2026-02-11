@@ -74,14 +74,15 @@ public class TextureAtlas {
         float vMax = 1.0f - (float) tileY / RELATIVE_ATLAS_HEIGHT;
 
         return new float[][]{
+                { uMax, vMin },
                 { uMin, vMin },
                 { uMin, vMax },
+                { uMin, vMax },
                 { uMax, vMax },
-                { uMax, vMax },
-                { uMax, vMin },
-                { uMin, vMin }
+                { uMax, vMin }
         };
     }
+
 
 
     public static float[][] bottomTextureMapping(BlockTextures BlockTexture) {

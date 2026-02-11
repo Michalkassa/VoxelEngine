@@ -42,39 +42,39 @@ public class Chunk {
     };
 
     private static final float[][] CUBE_NORTH_FACE = {
-            {  0.5f, -0.5f,  0.5f },  // BL (facing +X direction)
-            {  0.5f,  0.5f,  0.5f },  // TL
-            {  0.5f,  0.5f, -0.5f },  // TR
-            {  0.5f,  0.5f, -0.5f },  // TR
+            {  0.5f, -0.5f,  0.5f },  // BL
             {  0.5f, -0.5f, -0.5f },  // BR
+            {  0.5f,  0.5f, -0.5f },  // TR
+            {  0.5f,  0.5f, -0.5f },  // TR
+            {  0.5f,  0.5f,  0.5f },  // TL
             {  0.5f, -0.5f,  0.5f }   // BL
     };
 
     private static final float[][] CUBE_SOUTH_FACE = {
-            { -0.5f, -0.5f, -0.5f },  // BL (facing -X direction)
-            { -0.5f,  0.5f, -0.5f },  // TL
-            { -0.5f,  0.5f,  0.5f },  // TR
-            { -0.5f,  0.5f,  0.5f },  // TR
-            { -0.5f, -0.5f,  0.5f },  // BR
-            { -0.5f, -0.5f, -0.5f }   // BL
+            { -0.5f, -0.5f, -0.5f },  // BR
+            { -0.5f, -0.5f,  0.5f },  // BL
+            { -0.5f,  0.5f,  0.5f },  // TL
+            { -0.5f,  0.5f,  0.5f },  // TL
+            { -0.5f,  0.5f, -0.5f },  // TR
+            { -0.5f, -0.5f, -0.5f }   // BR
     };
 
     private static final float[][] CUBE_EAST_FACE = {
-            { -0.5f, -0.5f,  0.5f },  // BL (facing +Z direction)
-            { -0.5f,  0.5f,  0.5f },  // TL
-            {  0.5f,  0.5f,  0.5f },  // TR
-            {  0.5f,  0.5f,  0.5f },  // TR
+            { -0.5f, -0.5f,  0.5f },  // BL
             {  0.5f, -0.5f,  0.5f },  // BR
+            {  0.5f,  0.5f,  0.5f },  // TR
+            {  0.5f,  0.5f,  0.5f },  // TR
+            { -0.5f,  0.5f,  0.5f },  // TL
             { -0.5f, -0.5f,  0.5f }   // BL
     };
 
     private static final float[][] CUBE_WEST_FACE = {
-            {  0.5f, -0.5f, -0.5f },  // BL (facing -Z direction)
-            {  0.5f,  0.5f, -0.5f },  // TL
-            { -0.5f,  0.5f, -0.5f },  // TR
-            { -0.5f,  0.5f, -0.5f },  // TR
-            { -0.5f, -0.5f, -0.5f },  // BR
-            {  0.5f, -0.5f, -0.5f }   // BL
+            {  0.5f, -0.5f, -0.5f },  // BR
+            { -0.5f, -0.5f, -0.5f },  // BL
+            { -0.5f,  0.5f, -0.5f },  // TL
+            { -0.5f,  0.5f, -0.5f },  // TL
+            {  0.5f,  0.5f, -0.5f },  // TR
+            {  0.5f, -0.5f, -0.5f }   // BR
     };
 
 
@@ -178,7 +178,10 @@ public class Chunk {
         }
 
         boolean renderBottom;
-        if (y > 0) {
+        if (y == 0){
+            renderBottom = false;
+        }
+        else if (y > 0) {
             renderBottom = blocks[x][y-1][z] == 0;
         } else {
             renderBottom = !isBlockAtWorldPos(worldX, worldY - 1, worldZ);
