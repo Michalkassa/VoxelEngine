@@ -2,6 +2,7 @@ package Core;
 
 import Entity.TestEntity;
 import World.Chunk;
+import World.ChunkManager;
 import org.joml.Math;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.stb.STBImage;
@@ -22,7 +23,7 @@ public class Renderer {
     private Matrix4f view;
     private Matrix4f projection;
     private Camera camera;
-    private Chunk chunk;
+    private ChunkManager chunkManager;
     private TestEntity test;
 
 
@@ -57,7 +58,10 @@ public class Renderer {
 
 
         //OBJECTS
-        chunk = new Chunk(new Vector3f(0,0,0));
+        chunkManager = new ChunkManager();
+
+        chunkManager.loadChunksInRadius(new Vector2i(0,0), 4);
+
         test = new TestEntity(new Vector3f(1,5,1));
 
         glEnable(GL_DEPTH_TEST);
@@ -66,7 +70,6 @@ public class Renderer {
     public void update(float dt){
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         camera.update(dt);
-        test.update(dt, chunk);
         shader.bind();
 
         camera.getViewMatrix(view);
@@ -87,13 +90,13 @@ public class Renderer {
 
         model.identity();
         glUniformMatrix4fv(model_transform, false, model.get(matBuffer));
-        chunk.render();
+        chunkManager.renderChunks();
 
     }
 
     public void cleanup(){
         texture.cleanup();
-        chunk.cleanup();
+        chunkManager.cleanup();
         test.cleanup();
         shader.cleanup();
     }
