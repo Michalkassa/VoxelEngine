@@ -1,5 +1,6 @@
 package Core;
 
+import World.Chunk;
 import org.joml.Vector3f;
 import java.lang.Math;
 import static org.lwjgl.glfw.GLFW.*;
@@ -79,6 +80,11 @@ public class Camera {
         setDirection(dt);
         right.set(direction).cross(world_up).normalize();
         up.set(right).cross(direction).normalize();
+    }
+
+
+    public Vector3i getChunkPosition(){
+        return new Vector3i((int) position.x / Chunk.CHUNK_SIZE, 0 , (int) position.z / Chunk.CHUNK_SIZE);
     }
 
     public Matrix4f getViewMatrix(Matrix4f dest) {

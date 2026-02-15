@@ -28,7 +28,7 @@ public class ChunkManager {
         }
     }
 
-    public void unloadChunk(Vector2i position){
+    public void unloadChunk(Vector3i position){
         Chunk chunk = chunks.remove(position);
         if(chunk != null){
             chunk.cleanup();
@@ -96,16 +96,36 @@ public class ChunkManager {
         rebuildAdjacentChunks(chunkCoordinates);
     }
 
-    public void loadChunksInRadius(Vector2i centre, int radius){
+    public void loadChunksInRadius(Vector3i centre, int radius){
         for (int x = centre.x - radius; x <= centre.x + radius; x++){
-            for(int z = centre.y - radius; z <= centre.y + radius; z++){
+            for(int z = centre.z - radius; z <= centre.z + radius; z++){
                 loadChunk(new Vector3i(x,0,z));
             }
         }
     }
 
+    public void unloadChunksOutOfRadius(Vector3i centre, int radius) {
+        int centerX = centre.x;
+        int centerZ = centre.z;
 
-    private void rebuildAdjacentChunks(Vector3i position) {
+        java.util.List<Vector3i> chunksToUnload = new java.util.ArrayList<>();
+
+        for (Vector3i chunkPos : chunks.keySet()) {
+            int deltaX = Math.abs(chunkPos.x - centerX);
+            int deltaZ = Math.abs(chunkPos.z - centerZ);
+
+            if (deltaX > radius || deltaZ > radius) {
+                chunksToUnload.add(chunkPos);
+            }
+        }
+
+        for (Vector3i chunkPos : chunksToUnload) {
+            unloadChunk(chunkPos);
+        }
+    }
+
+
+        private void rebuildAdjacentChunks(Vector3i position) {
         Vector3i[] neighbors = {
                 new Vector3i(position.x + 1, 0, position.z),  // North (X+)
                 new Vector3i(position.x - 1, 0, position.z),  // South (X-)
