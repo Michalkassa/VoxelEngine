@@ -5,6 +5,7 @@ import Core.Transform;
 import World.Chunk;
 import Core.Game;
 import org.joml.Vector3f;
+import org.joml.Vector3i;
 
 import java.util.ArrayList;
 
@@ -36,12 +37,13 @@ public class Entity {
         applyCollisions(chunk);
     }
 
-    protected void applyCollisions(Chunk chunk){
-        if(transform.position.y <= 1.70){
-            onGround = true;
+    protected void applyCollisions(Chunk chunk) {
+       if(transform.position.y <=6){
             velocity.y = 0;
-        }
+            onGround = true;
+       }
     }
+
 
     protected void applyGravity(float dt){
         if (!onGround){

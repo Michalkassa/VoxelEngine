@@ -13,8 +13,8 @@ import java.util.Random;
 public class Chunk {
     private byte[][][] blocks;
     private Mesh ChunkMesh;
-    private Vector2i chunkPosition;
-    private ChunkManager chunkManager;
+    private Vector3i chunkPosition;
+    public ChunkManager chunkManager;
 
     public static final int CHUNK_SIZE = 16;
     public static final int CHUNK_HEIGHT = 128;
@@ -23,8 +23,9 @@ public class Chunk {
     private float[][] bottomTextureMapping;
     private float[][] sideTextureMapping;
 
+    // Top face (Y = +0.5, normal pointing up +Y)
     private static final float[][] CUBE_TOP_FACE = {
-            { -0.5f,  0.5f, -0.5f },  // BL (looking down at top)
+            { -0.5f,  0.5f, -0.5f },  // BL
             { -0.5f,  0.5f,  0.5f },  // TL
             {  0.5f,  0.5f,  0.5f },  // TR
             {  0.5f,  0.5f,  0.5f },  // TR
@@ -32,8 +33,9 @@ public class Chunk {
             { -0.5f,  0.5f, -0.5f }   // BL
     };
 
+    // Bottom face (Y = -0.5, normal pointing down -Y)
     private static final float[][] CUBE_BOTTOM_FACE = {
-            { -0.5f, -0.5f,  0.5f },  // BL (looking up at bottom)
+            { -0.5f, -0.5f,  0.5f },  // BL
             { -0.5f, -0.5f, -0.5f },  // TL
             {  0.5f, -0.5f, -0.5f },  // TR
             {  0.5f, -0.5f, -0.5f },  // TR
@@ -41,6 +43,7 @@ public class Chunk {
             { -0.5f, -0.5f,  0.5f }   // BL
     };
 
+    // North face (X = +0.5, normal pointing in +X direction)
     private static final float[][] CUBE_NORTH_FACE = {
             {  0.5f, -0.5f,  0.5f },  // BL
             {  0.5f, -0.5f, -0.5f },  // BR
@@ -50,6 +53,7 @@ public class Chunk {
             {  0.5f, -0.5f,  0.5f }   // BL
     };
 
+    // South face (X = -0.5, normal pointing in -X direction)
     private static final float[][] CUBE_SOUTH_FACE = {
             { -0.5f, -0.5f, -0.5f },  // BR
             { -0.5f, -0.5f,  0.5f },  // BL
@@ -59,6 +63,7 @@ public class Chunk {
             { -0.5f, -0.5f, -0.5f }   // BR
     };
 
+    // East face (Z = +0.5, normal pointing in +Z direction)
     private static final float[][] CUBE_EAST_FACE = {
             { -0.5f, -0.5f,  0.5f },  // BL
             {  0.5f, -0.5f,  0.5f },  // BR
@@ -68,6 +73,7 @@ public class Chunk {
             { -0.5f, -0.5f,  0.5f }   // BL
     };
 
+    // West face (Z = -0.5, normal pointing in -Z direction)
     private static final float[][] CUBE_WEST_FACE = {
             {  0.5f, -0.5f, -0.5f },  // BR
             { -0.5f, -0.5f, -0.5f },  // BL
@@ -76,27 +82,30 @@ public class Chunk {
             {  0.5f,  0.5f, -0.5f },  // TR
             {  0.5f, -0.5f, -0.5f }   // BR
     };
-
-
     private ArrayList<Float> vertices;
 
 
-    public Chunk(Vector2i position, ChunkManager chunkManager){
+    public Chunk(Vector3i position, ChunkManager chunkManager){
         this.chunkPosition = position;
-        this.blocks = new byte[CHUNK_SIZE+1][CHUNK_HEIGHT+1][CHUNK_SIZE+1];
+        this.blocks = new byte[CHUNK_SIZE][CHUNK_HEIGHT][CHUNK_SIZE];
         this.chunkManager = chunkManager;
+
+        topTextureMapping = TextureAtlas.topTextureMapping(TextureAtlas.BlockTextures.GRASS);
+        bottomTextureMapping = TextureAtlas.bottomTextureMapping(TextureAtlas.BlockTextures.GRASS);
+        sideTextureMapping = TextureAtlas.sideTextureMapping(TextureAtlas.BlockTextures.GRASS);
+
         generateBlocks();
         buildMesh();
     }
 
     public byte getBlock(int x, int y, int z){
-        if(x > CHUNK_SIZE || x < 0){
+        if(x >= CHUNK_SIZE || x < 0){
             throw new RuntimeException("Accessing x coordinate outside the chunk");
         }
-        if(y > CHUNK_HEIGHT || y < 0){
+        if(y >= CHUNK_HEIGHT || y < 0){
             throw new RuntimeException("Accessing y coordinate outside the chunk");
         }
-        if(z > CHUNK_SIZE || z < 0){
+        if(z >= CHUNK_SIZE || z < 0){
             throw new RuntimeException("Accessing z coordinate outside the chunk");
         }
 
@@ -106,28 +115,26 @@ public class Chunk {
     private void generateBlocks(){
         for(int x = 0; x < CHUNK_SIZE; x++){
             for(int z = 0; z < CHUNK_SIZE; z++){
-                for(int y = 0; y < 5; y++){
+                for(int y = 0; y < 2; y++){
                     blocks[x][y][z] = 1;
                 }
             }
         }
     }
 
+
+
     public void buildMesh(){
         vertices = new ArrayList<>();
 
         float worldX =  chunkPosition.x * CHUNK_SIZE;
         float worldY = 0;
-        float worldZ = chunkPosition.y * CHUNK_SIZE;
+        float worldZ = chunkPosition.z * CHUNK_SIZE;
 
         for(int x = 0 ; x < CHUNK_SIZE; x++){
             for(int y = 0 ; y < CHUNK_HEIGHT; y++){
                 for(int z = 0 ; z < CHUNK_SIZE; z++){
                     if(blocks[x][y][z] != 0){
-                        //TEMPORARY , TODO fix
-                        topTextureMapping = TextureAtlas.topTextureMapping(TextureAtlas.BlockTextures.GRASS);
-                        bottomTextureMapping = TextureAtlas.bottomTextureMapping(TextureAtlas.BlockTextures.GRASS);;
-                        sideTextureMapping = TextureAtlas.sideTextureMapping(TextureAtlas.BlockTextures.GRASS);;
                         addBlock(new Vector3f(x + worldX,y + worldY, z + worldZ), new Vector3i(x,y,z));
                     }
                 }
@@ -150,8 +157,17 @@ public class Chunk {
         return chunkManager.isBlockAt(new Vector3i(worldX, worldY, worldZ));
     }
 
+    private void addFace(float[][] face, float[][] texMapping, float px, float py, float pz) {
+        for (int i = 0; i < 6; i++) {
+            vertices.add(face[i][0] + px);
+            vertices.add(face[i][1] + py);
+            vertices.add(face[i][2] + pz);
+            vertices.add(texMapping[i][0]);
+            vertices.add(texMapping[i][1]);
+        }
+    }
 
-    //TODO fix repetition
+
     private void addBlock(Vector3f position, Vector3i relativeChunkPosition){
         int x = relativeChunkPosition.x;
         int y = relativeChunkPosition.y;
@@ -159,106 +175,27 @@ public class Chunk {
 
         int worldX = chunkPosition.x * CHUNK_SIZE + x;
         int worldY = y;
-        int worldZ = chunkPosition.y * CHUNK_SIZE + z;
+        int worldZ = chunkPosition.z * CHUNK_SIZE + z;
 
-        boolean renderTop;
-        if (y < CHUNK_HEIGHT - 1) {
-            renderTop = blocks[x][y+1][z] == 0;
-        } else {
-            renderTop = !isBlockAtWorldPos(worldX, worldY + 1, worldZ);
-        }
-        if (renderTop) {
-            for (int i = 0; i < CUBE_TOP_FACE.length; i++) {
-                vertices.add(CUBE_TOP_FACE[i][0] + position.x);
-                vertices.add(CUBE_TOP_FACE[i][1] + position.y);
-                vertices.add(CUBE_TOP_FACE[i][2] + position.z);
-                vertices.add(topTextureMapping[i][0]);
-                vertices.add(topTextureMapping[i][1]);
-            }
+        boolean hasTop = !isBlockAtWorldPos(worldX, worldY + 1, worldZ);
+        boolean hasBottom = !isBlockAtWorldPos(worldX, worldY - 1, worldZ);
+        boolean hasNorth = !isBlockAtWorldPos(worldX + 1, worldY, worldZ);
+        boolean hasSouth = !isBlockAtWorldPos(worldX - 1, worldY, worldZ);
+        boolean hasEast = !isBlockAtWorldPos(worldX, worldY, worldZ + 1);
+        boolean hasWest = !isBlockAtWorldPos(worldX, worldY, worldZ - 1);
+
+        if (!hasTop && !hasBottom && !hasNorth && !hasSouth && !hasEast && !hasWest) {
+            return;
         }
 
-        boolean renderBottom;
-        if (y == 0){
-            renderBottom = false;
-        }
-        else if (y > 0) {
-            renderBottom = blocks[x][y-1][z] == 0;
-        } else {
-            renderBottom = !isBlockAtWorldPos(worldX, worldY - 1, worldZ);
-        }
-        if (renderBottom) {
-            for (int i = 0; i < CUBE_BOTTOM_FACE.length; i++) {
-                vertices.add(CUBE_BOTTOM_FACE[i][0] + position.x);
-                vertices.add(CUBE_BOTTOM_FACE[i][1] + position.y);
-                vertices.add(CUBE_BOTTOM_FACE[i][2] + position.z);
-                vertices.add(bottomTextureMapping[i][0]);
-                vertices.add(bottomTextureMapping[i][1]);
-            }
-        }
+        float px = position.x, py = position.y, pz = position.z;
 
-        boolean renderNorth;
-        if (x < CHUNK_SIZE - 1) {
-            renderNorth = blocks[x+1][y][z] == 0;
-        } else {
-            renderNorth = !isBlockAtWorldPos(worldX + 1, worldY, worldZ);
-        }
-        if (renderNorth) {
-            for (int i = 0; i < CUBE_NORTH_FACE.length; i++) {
-                vertices.add(CUBE_NORTH_FACE[i][0] + position.x);
-                vertices.add(CUBE_NORTH_FACE[i][1] + position.y);
-                vertices.add(CUBE_NORTH_FACE[i][2] + position.z);
-                vertices.add(sideTextureMapping[i][0]);
-                vertices.add(sideTextureMapping[i][1]);
-            }
-        }
-
-        boolean renderSouth;
-        if (x > 0) {
-            renderSouth = blocks[x-1][y][z] == 0;
-        } else {
-            renderSouth = !isBlockAtWorldPos(worldX - 1, worldY, worldZ);
-        }
-        if (renderSouth) {
-            for (int i = 0; i < CUBE_SOUTH_FACE.length; i++) {
-                vertices.add(CUBE_SOUTH_FACE[i][0] + position.x);
-                vertices.add(CUBE_SOUTH_FACE[i][1] + position.y);
-                vertices.add(CUBE_SOUTH_FACE[i][2] + position.z);
-                vertices.add(sideTextureMapping[i][0]);
-                vertices.add(sideTextureMapping[i][1]);
-            }
-        }
-
-        boolean renderEast;
-        if (z < CHUNK_SIZE - 1) {
-            renderEast = blocks[x][y][z+1] == 0;
-        } else {
-            renderEast = !isBlockAtWorldPos(worldX, worldY, worldZ + 1);
-        }
-        if (renderEast) {
-            for (int i = 0; i < CUBE_EAST_FACE.length; i++) {
-                vertices.add(CUBE_EAST_FACE[i][0] + position.x);
-                vertices.add(CUBE_EAST_FACE[i][1] + position.y);
-                vertices.add(CUBE_EAST_FACE[i][2] + position.z);
-                vertices.add(sideTextureMapping[i][0]);
-                vertices.add(sideTextureMapping[i][1]);
-            }
-        }
-
-        boolean renderWest;
-        if (z > 0) {
-            renderWest = blocks[x][y][z-1] == 0;
-        } else {
-            renderWest = !isBlockAtWorldPos(worldX, worldY, worldZ - 1);
-        }
-        if (renderWest) {
-            for (int i = 0; i < CUBE_WEST_FACE.length; i++) {
-                vertices.add(CUBE_WEST_FACE[i][0] + position.x);
-                vertices.add(CUBE_WEST_FACE[i][1] + position.y);
-                vertices.add(CUBE_WEST_FACE[i][2] + position.z);
-                vertices.add(sideTextureMapping[i][0]);
-                vertices.add(sideTextureMapping[i][1]);
-            }
-        }
+        if (hasTop) addFace(CUBE_TOP_FACE, topTextureMapping, px, py, pz);
+        if (hasBottom) addFace(CUBE_BOTTOM_FACE, bottomTextureMapping, px, py, pz);
+        if (hasNorth) addFace(CUBE_NORTH_FACE, sideTextureMapping, px, py, pz);
+        if (hasSouth) addFace(CUBE_SOUTH_FACE, sideTextureMapping, px, py, pz);
+        if (hasEast) addFace(CUBE_EAST_FACE, sideTextureMapping, px, py, pz);
+        if (hasWest) addFace(CUBE_WEST_FACE, sideTextureMapping, px, py, pz);
     }
 
     public void setBlock(Vector3i relative_chunk_position, byte block_type){
@@ -266,13 +203,13 @@ public class Chunk {
         int y = relative_chunk_position.y;
         int z = relative_chunk_position.z;
 
-        if(x > CHUNK_SIZE || x < 0){
+        if(x >= CHUNK_SIZE || x < 0){
             throw new RuntimeException("Accessing x coordinate outside the chunk");
         }
-        if(y > CHUNK_HEIGHT || y < 0){
+        if(y >= CHUNK_HEIGHT || y < 0){
             throw new RuntimeException("Accessing y coordinate outside the chunk");
         }
-        if(z > CHUNK_SIZE || z < 0){
+        if(z >= CHUNK_SIZE || z < 0){
             throw new RuntimeException("Accessing z coordinate outside the chunk");
         }
 

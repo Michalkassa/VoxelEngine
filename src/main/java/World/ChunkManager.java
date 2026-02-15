@@ -11,13 +11,13 @@ import java.lang.Math;
 
 public class ChunkManager {
 
-    private Map<Vector2i,Chunk> chunks;
+    private Map<Vector3i,Chunk> chunks;
 
     public ChunkManager(){
         this.chunks = new HashMap<>();
     }
 
-    public void loadChunk(Vector2i position){
+    public void loadChunk(Vector3i position){
         if(!chunks.containsKey(position)){
             Chunk chunk = new Chunk(position, this);
             chunks.put(position,chunk);
@@ -35,13 +35,20 @@ public class ChunkManager {
         }
     }
 
-    public Chunk getChunk(Vector2i position){
+    public Chunk getChunk(Vector3f world_position) {
+        int chunkX = Math.floorDiv((int) world_position.x, Chunk.CHUNK_SIZE);
+        int chunkZ = Math.floorDiv((int) world_position.z, Chunk.CHUNK_SIZE);
+
+        return getChunk(new Vector3i(chunkX,0, chunkZ));
+    }
+
+    public Chunk getChunk(Vector3i position){
         return chunks.get(position);
     }
 
 
     public boolean isBlockAt(Vector3i world_position){
-        Vector2i chunkCoordinates = new Vector2i(Math.floorDiv(world_position.x, Chunk.CHUNK_SIZE), Math.floorDiv(world_position.z, Chunk.CHUNK_SIZE));
+        Vector3i chunkCoordinates = new Vector3i(Math.floorDiv(world_position.x, Chunk.CHUNK_SIZE),0, Math.floorDiv(world_position.z, Chunk.CHUNK_SIZE));
         Vector3i localCoordinates = new Vector3i(Math.floorMod(world_position.x, Chunk.CHUNK_SIZE), world_position.y,Math.floorMod(world_position.z, Chunk.CHUNK_SIZE));
 
         Chunk chunk = getChunk(chunkCoordinates);
@@ -59,7 +66,7 @@ public class ChunkManager {
 
 
     public byte getBlockAt(Vector3i world_position){
-        Vector2i chunkCoordinates = new Vector2i(Math.floorDiv(world_position.x, Chunk.CHUNK_SIZE), Math.floorDiv(world_position.z, Chunk.CHUNK_SIZE));
+        Vector3i chunkCoordinates = new Vector3i(Math.floorDiv(world_position.x, Chunk.CHUNK_SIZE),0, Math.floorDiv(world_position.z, Chunk.CHUNK_SIZE));
         Vector3i localCoordinates = new Vector3i(Math.floorMod(world_position.x, Chunk.CHUNK_SIZE), world_position.y,Math.floorMod(world_position.z, Chunk.CHUNK_SIZE));
 
         Chunk chunk = getChunk(chunkCoordinates);
@@ -77,34 +84,36 @@ public class ChunkManager {
 
 
     public void setBlockAt(Vector3i world_position, byte block_type){
-        Vector2i chunkCoordinates = new Vector2i(Math.floorDiv(world_position.x, Chunk.CHUNK_SIZE), Math.floorDiv(world_position.z, Chunk.CHUNK_SIZE));
+        Vector3i chunkCoordinates = new Vector3i(Math.floorDiv(world_position.x, Chunk.CHUNK_SIZE),0, Math.floorDiv(world_position.z, Chunk.CHUNK_SIZE));
         Vector3i localCoordinates = new Vector3i(Math.floorMod(world_position.x, Chunk.CHUNK_SIZE), world_position.y,Math.floorMod(world_position.z, Chunk.CHUNK_SIZE));
 
         Chunk chunk = getChunk(chunkCoordinates);
 
         if(chunk == null || localCoordinates.y < 0 || localCoordinates.y >= Chunk.CHUNK_HEIGHT){
-            chunk.setBlock(localCoordinates, block_type);
+            throw new RuntimeException("Trying to set block that doesnt Exist");
         }
+        chunk.setBlock(localCoordinates, block_type);
+        rebuildAdjacentChunks(chunkCoordinates);
     }
 
     public void loadChunksInRadius(Vector2i centre, int radius){
         for (int x = centre.x - radius; x <= centre.x + radius; x++){
             for(int z = centre.y - radius; z <= centre.y + radius; z++){
-                loadChunk(new Vector2i(x,z));
+                loadChunk(new Vector3i(x,0,z));
             }
         }
     }
 
 
-    private void rebuildAdjacentChunks(Vector2i position) {
-        Vector2i[] neighbors = {
-                new Vector2i(position.x + 1, position.y),  // East
-                new Vector2i(position.x - 1, position.y),  // West
-                new Vector2i(position.x, position.y + 1),  // North
-                new Vector2i(position.x, position.y - 1)   // South
+    private void rebuildAdjacentChunks(Vector3i position) {
+        Vector3i[] neighbors = {
+                new Vector3i(position.x + 1, 0, position.z),  // North (X+)
+                new Vector3i(position.x - 1, 0, position.z),  // South (X-)
+                new Vector3i(position.x, 0, position.z + 1),  // East (Z+)
+                new Vector3i(position.x, 0, position.z - 1)   // West (Z-)
         };
 
-        for (Vector2i neighbor : neighbors) {
+        for (Vector3i neighbor : neighbors) {
             Chunk chunk = getChunk(neighbor);
             if (chunk != null) {
                 chunk.buildMesh();

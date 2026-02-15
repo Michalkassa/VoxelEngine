@@ -60,9 +60,16 @@ public class Renderer {
         //OBJECTS
         chunkManager = new ChunkManager();
 
-        chunkManager.loadChunksInRadius(new Vector2i(0,0), 4);
+        chunkManager.loadChunk(new Vector3i(0, 0, 0));
+        chunkManager.loadChunk(new Vector3i(0, 0, -1));
+        chunkManager.setBlockAt(new Vector3i(1,1,0),(byte) 0);
+//        for (int x = -20 ; x < 20; x++){
+//            for(int z = 0; z < 20; z++){
+//                 chunkManager.setBlockAt(new Vector3i(x,1,z),(byte) 0);
+//            }
+//        }
 
-        test = new TestEntity(new Vector3f(1,5,1));
+        test = new TestEntity(new Vector3f(1,10,1));
 
         glEnable(GL_DEPTH_TEST);
         glEnable(GL_CULL_FACE);
@@ -94,6 +101,7 @@ public class Renderer {
         model.identity();
         glUniformMatrix4fv(model_transform, false, model.get(matBuffer));
         chunkManager.renderChunks();
+        test.update(dt, chunkManager.getChunk(test.getPosition()));
 
     }
 
