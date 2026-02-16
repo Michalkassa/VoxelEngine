@@ -9,7 +9,7 @@ import org.joml.Vector3i;
 
 import java.util.ArrayList;
 
-public class Entity {
+public abstract class Entity {
     private static final float GRAVITY_CONSTANT = 9.81f;
     protected Transform transform;
     protected Vector3f velocity;

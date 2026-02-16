@@ -12,20 +12,35 @@ import java.lang.Math;
 public class ChunkManager {
 
     private Map<Vector3i,Chunk> chunks;
+    private TerrainGenerator terrainGenerator;
+    private  long seed;
 
-    public ChunkManager(){
+    public ChunkManager(long seed){
         this.chunks = new HashMap<>();
+        this.terrainGenerator = new TerrainGenerator(seed);
     }
 
     public void loadChunk(Vector3i position){
-        if(!chunks.containsKey(position)){
-            Chunk chunk = new Chunk(position, this);
-            chunks.put(position,chunk);
+            if(!chunks.containsKey(position)){
+                Chunk chunk;
 
-            chunk.buildMesh();
+                // Try to load saved chunk data
+                //ChunkData savedData = chunkStorage.loadChunk(position);
 
-            rebuildAdjacentChunks(position);
-        }
+//                if (savedData != null) {
+//                    // Load from saved data
+//                    chunk = new Chunk(position, this, savedData.getBlocks());
+//                    System.out.println("Loaded chunk from disk: " + position);
+//                }
+
+                    // Generate new chunk using terrain generator
+                byte[][][] generatedBlocks = terrainGenerator.generateChunkTerrain(position);
+                chunk = new Chunk(position, this, generatedBlocks);
+
+                chunks.put(position, chunk);
+                chunk.buildMesh();
+                rebuildAdjacentChunks(position);
+            }
     }
 
     public void unloadChunk(Vector3i position){

@@ -85,16 +85,15 @@ public class Chunk {
     private ArrayList<Float> vertices;
 
 
-    public Chunk(Vector3i position, ChunkManager chunkManager){
+    public Chunk(Vector3i position, ChunkManager chunkManager, byte[][][] loadedBlocks){
         this.chunkPosition = position;
-        this.blocks = new byte[CHUNK_SIZE][CHUNK_HEIGHT][CHUNK_SIZE];
+        this.blocks = loadedBlocks;
         this.chunkManager = chunkManager;
 
         topTextureMapping = TextureAtlas.topTextureMapping(TextureAtlas.BlockTextures.GRASS);
         bottomTextureMapping = TextureAtlas.bottomTextureMapping(TextureAtlas.BlockTextures.GRASS);
         sideTextureMapping = TextureAtlas.sideTextureMapping(TextureAtlas.BlockTextures.GRASS);
 
-        generateBlocks();
         buildMesh();
     }
 
@@ -112,16 +111,15 @@ public class Chunk {
         return blocks[x][y][z];
     }
 
-    private void generateBlocks(){
-        for(int x = 0; x < CHUNK_SIZE; x++){
-            for(int z = 0; z < CHUNK_SIZE; z++){
-                for(int y = 0; y < 2; y++){
-                    blocks[x][y][z] = 1;
-                }
-            }
-        }
-    }
-
+//    private void generateBlocks(){
+//        for(int x = 0; x < CHUNK_SIZE; x++){
+//            for(int z = 0; z < CHUNK_SIZE; z++){
+//                for(int y = 0; y < 2; y++){
+//                    blocks[x][y][z] = 1;
+//                }
+//            }
+//        }
+//    }
 
 
     public void buildMesh(){

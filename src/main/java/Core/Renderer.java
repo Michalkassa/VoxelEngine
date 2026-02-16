@@ -56,9 +56,9 @@ public class Renderer {
 
         projection.perspective((float)Math.toRadians(80f), aspect_ratio, 0.1f, 512f);
 
-        chunkManager = new ChunkManager();
+        chunkManager = new ChunkManager(1);
 
-        chunkManager.loadChunksInRadius(camera.getChunkPosition(), 3);
+        chunkManager.loadChunksInRadius(camera.getChunkPosition(), 4);
         chunkManager.setBlockAt(new Vector3i(1,1,0),(byte) 0);
         test = new TestEntity(new Vector3f(1,10,1));
 
@@ -73,8 +73,8 @@ public class Renderer {
         camera.update(dt);
         shader.bind();
 
-        chunkManager.loadChunksInRadius(camera.getChunkPosition(), 3);
-        chunkManager.unloadChunksOutOfRadius(camera.getChunkPosition(), 3);
+        chunkManager.loadChunksInRadius(camera.getChunkPosition(), 6);
+        chunkManager.unloadChunksOutOfRadius(camera.getChunkPosition(), 6);
         camera.getViewMatrix(view);
 
         //model.rotate(Math.toRadians(-55f) * deltaTime , new Vector3f(0f,1f,0f)).normalize3x3();
