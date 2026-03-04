@@ -25,7 +25,7 @@ public class TerrainGenerator {
             for (int z = 0 ; z< Chunk.CHUNK_SIZE; z++){
                 int height = noise.getHeight(new Vector3i(worldPosition.x + x,0 ,worldPosition.z + z));
 
-                for (int y = 0; y < height; y++) {
+                for (int y = 0; y < 3; y++) {
                     blocks[x][y][z] = 1;
                 }
             }

@@ -3,6 +3,7 @@ package Core;
 import Entity.TestEntity;
 import World.Chunk;
 import World.ChunkManager;
+import World.World;
 import org.joml.Math;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.stb.STBImage;
@@ -23,9 +24,7 @@ public class Renderer {
     private Matrix4f view;
     private Matrix4f projection;
     private Camera camera;
-    private ChunkManager chunkManager;
-    private TestEntity test;
-
+    private World world;
 
     private int model_transform;
     private int view_transform ;
@@ -36,7 +35,7 @@ public class Renderer {
 
     public void init() {
 
-        camera = new Camera(new Vector3f(0,34,0), new Vector3f(0,0,0));
+        camera = new Camera(new Vector3f(0,4,0), new Vector3f(0,0,0));
         shader = new Shader("/shaders/vertexShader.glsl","/shaders/fragmentShader.glsl");
         texture = new Texture("/Users/michalkassa/Desktop/VoxelEngine/src/main/resources/images/texture.png");
 
@@ -56,6 +55,9 @@ public class Renderer {
 
         projection.perspective((float)Math.toRadians(80f), aspect_ratio, 0.1f, 512f);
 
+
+        world = new World("myWorld", camera, 1);
+
         glEnable(GL_DEPTH_TEST);
         glEnable(GL_CULL_FACE);
         glCullFace(GL_BACK);
@@ -65,6 +67,7 @@ public class Renderer {
     public void update(float dt){
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         camera.update(dt);
+        world.update();
         shader.bind();
 
         camera.getViewMatrix(view);
@@ -79,13 +82,9 @@ public class Renderer {
         texture.bind();
 
 
-        model.identity().translate(test.getPosition());
-        glUniformMatrix4fv(model_transform, false, model.get(matBuffer));
-        test.render();
-
         model.identity();
         glUniformMatrix4fv(model_transform, false, model.get(matBuffer));
-        chunkManager.renderChunks();
+        world.render();
 
     }
 
@@ -93,8 +92,7 @@ public class Renderer {
 
     public void cleanup(){
         texture.cleanup();
-        chunkManager.cleanup();
-        test.cleanup();
+        world.cleanup();
         shader.cleanup();
     }
 }

@@ -13,30 +13,20 @@ import java.util.Queue;
 public class SaveManager {
 
     String worldName;
-    Queue<Save> saves;
+    Save save;
     private final int SAVE_BACKLOG = 10;
     private FileLoader fileLoader;
 
-    public SaveManager(String worldName)throws IOException
+    public SaveManager(String worldName)
     {
         this.worldName = worldName;
     }
 
-    public void init()throws IOException
-    {
-        fileLoader = new FileLoader();
-        saves = fileLoader.LoadSaves();
+    public void LoadSave(Save save){
+        this.save = save;
     }
 
-    public PriorityQueue<Save> LoadSave() throws IOException, NullSaveFileLoadException {
-        FileLoader loader = new FileLoader();
-        //load all saves from world directory
-        //if file doesnt exist throw IOexception
-        //if none exists throw NullSaveFileLoadException
-    }
-
-    public void CreateSave(long seed, HashMap<Vector3i, Block> diff) throws IOException{
-        FileCreator creator = new FileCreator();
-        //if world directory doesnt exist throw IOexception
+    public Save getSave(){
+        return save;
     }
 }
