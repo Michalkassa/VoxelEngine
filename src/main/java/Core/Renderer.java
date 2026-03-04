@@ -36,7 +36,7 @@ public class Renderer {
 
     public void init() {
 
-        camera = new Camera(new Vector3f(0,2,0), new Vector3f(0,0,0));
+        camera = new Camera(new Vector3f(0,34,0), new Vector3f(0,0,0));
         shader = new Shader("/shaders/vertexShader.glsl","/shaders/fragmentShader.glsl");
         texture = new Texture("/Users/michalkassa/Desktop/VoxelEngine/src/main/resources/images/texture.png");
 
@@ -56,12 +56,6 @@ public class Renderer {
 
         projection.perspective((float)Math.toRadians(80f), aspect_ratio, 0.1f, 512f);
 
-        chunkManager = new ChunkManager(1);
-
-        chunkManager.loadChunksInRadius(camera.getChunkPosition(), 4);
-        chunkManager.setBlockAt(new Vector3i(1,1,0),(byte) 0);
-        test = new TestEntity(new Vector3f(1,10,1));
-
         glEnable(GL_DEPTH_TEST);
         glEnable(GL_CULL_FACE);
         glCullFace(GL_BACK);
@@ -73,8 +67,6 @@ public class Renderer {
         camera.update(dt);
         shader.bind();
 
-        chunkManager.loadChunksInRadius(camera.getChunkPosition(), 6);
-        chunkManager.unloadChunksOutOfRadius(camera.getChunkPosition(), 6);
         camera.getViewMatrix(view);
 
         //model.rotate(Math.toRadians(-55f) * deltaTime , new Vector3f(0f,1f,0f)).normalize3x3();
@@ -94,8 +86,6 @@ public class Renderer {
         model.identity();
         glUniformMatrix4fv(model_transform, false, model.get(matBuffer));
         chunkManager.renderChunks();
-
-        test.update(dt, chunkManager.getChunk(test.getPosition()));
 
     }
 

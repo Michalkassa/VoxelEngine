@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Vector;
 import java.lang.Math;
 
+//TODO FIX performance problems with multithreading
 public class ChunkManager {
 
     private Map<Vector3i,Chunk> chunks;
