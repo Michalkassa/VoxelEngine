@@ -1,4 +1,7 @@
 package Core;
+import Entity.Player;
+import World.World;
+import org.joml.Vector3f;
 import org.lwjgl.opengl.GL;
 
 import static org.lwjgl.glfw.GLFW.*;
@@ -8,6 +11,9 @@ public class Game {
 
     private Window window;
     private Renderer renderer;
+    private World world;
+    private Player player;
+
 
     private void init(){
         window = new Window(1920,1080, "VoxelEngine");
@@ -16,7 +22,10 @@ public class Game {
         glfwMakeContextCurrent(window.getWindowId());
         GL.createCapabilities();
 
-        renderer = new Renderer();
+        player = new Player(new Vector3f(0, 5, 0));
+        world = new World("myWorld", player.getCamera(), 1);
+        renderer = new Renderer(world, player.getCamera());
+
         renderer.init();
 
         Input.init(window.getWindowId());
@@ -29,7 +38,9 @@ public class Game {
             lastFrameTime = currentTime;
 
             window.update();
+            player.update(deltaTime, world.getChunkManager().getChunk(player.getPosition()));
             renderer.update(deltaTime);
+            player.render();
             glfwPollEvents();
             glfwSwapBuffers(window.getWindowId());
         }

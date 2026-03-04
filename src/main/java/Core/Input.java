@@ -5,6 +5,8 @@ import org.lwjgl.glfw.GLFW;
 public class Input {
 
     private static final boolean[] keys = new boolean[GLFW.GLFW_KEY_LAST];
+    private static final boolean[] keysPressed = new boolean[GLFW.GLFW_KEY_LAST];
+
     private static float mouseX, mouseY;
     private static float deltaX, deltaY;
     private static float lastX, lastY;
@@ -14,7 +16,13 @@ public class Input {
 
         GLFW.glfwSetKeyCallback(window, (w, key, scancode, action, mods) -> {
             if (key < 0) return;
+
+            boolean wasDown = keys[key];
             keys[key] = action != GLFW.GLFW_RELEASE;
+
+            if (action == GLFW.GLFW_PRESS && !wasDown) {
+                keysPressed[key] = true;
+            }
         });
 
         GLFW.glfwSetCursorPosCallback(window, (w, xpos, ypos) -> {
@@ -39,6 +47,12 @@ public class Input {
 
     public static boolean isKeyDown(int key) {
         return keys[key];
+    }
+
+    public static boolean isKeyPressed(int key) {
+        boolean pressed = keysPressed[key];
+        keysPressed[key] = false;
+        return pressed;
     }
 
     public static float getMouseDeltaX(){

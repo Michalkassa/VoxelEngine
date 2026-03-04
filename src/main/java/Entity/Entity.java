@@ -27,9 +27,9 @@ public abstract class Entity {
     }
 
     public void update(float dt , Chunk chunk){
-        applyCollisions(chunk);
-        move(new Vector3f(velocity).mul(dt),chunk);
         applyGravity(dt);
+        move(new Vector3f(velocity).mul(dt),chunk);
+        applyCollisions(chunk);
     }
 
     protected void move(Vector3f velocity, Chunk chunk){
@@ -38,12 +38,16 @@ public abstract class Entity {
     }
 
     protected void applyCollisions(Chunk chunk) {
-       if(transform.position.y <=6){
-            velocity.y = 0;
-            onGround = true;
-       }
-    }
+        //TODO fix
 
+        float groundLevel = 3f;
+
+        if (transform.position.y <= groundLevel && velocity.y <= 0f) {
+            transform.position.y = groundLevel;
+            velocity.y = 0f;
+            onGround = true;
+        }
+    }
 
     protected void applyGravity(float dt){
         if (!onGround){

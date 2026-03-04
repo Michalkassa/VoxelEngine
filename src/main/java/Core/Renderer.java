@@ -32,10 +32,14 @@ public class Renderer {
 
     private final float[] matBuffer = new float[16];
 
+    public Renderer(World world, Camera camera) {
+        this.world = world;
+        this.camera = camera;
+    }
+
 
     public void init() {
 
-        camera = new Camera(new Vector3f(0,4,0), new Vector3f(0,0,0));
         shader = new Shader("/shaders/vertexShader.glsl","/shaders/fragmentShader.glsl");
         texture = new Texture("/Users/michalkassa/Desktop/VoxelEngine/src/main/resources/images/texture.png");
 
@@ -56,7 +60,6 @@ public class Renderer {
         projection.perspective((float)Math.toRadians(80f), aspect_ratio, 0.1f, 512f);
 
 
-        world = new World("myWorld", camera, 1);
 
         glEnable(GL_DEPTH_TEST);
         glEnable(GL_CULL_FACE);
