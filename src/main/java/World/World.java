@@ -43,26 +43,26 @@ public class World {
         this.saveManager = new SaveManager(name);
 
         chunkManager.loadChunksInRadius(camera.getChunkPosition(), 3);
-        chunkManager.setBlockAt(new Vector3i(0, 8, 0), (byte)1);
-        chunkManager.setBlockAt(new Vector3i(1, 8, 0), (byte)1);
-        chunkManager.setBlockAt(new Vector3i(2, 8, 0), (byte)1);
-        chunkManager.setBlockAt(new Vector3i(5, 8, 0), (byte)1);
-        chunkManager.setBlockAt(new Vector3i(8, 8, 0), (byte)1);
-        chunkManager.setBlockAt(new Vector3i(12, 8, 0), (byte)1);
-        chunkManager.setBlockAt(new Vector3i(16, 8, 0), (byte)1);
-        chunkManager.setBlockAt(new Vector3i(16, 8, 2), (byte)1);
-        chunkManager.setBlockAt(new Vector3i(19, 8, 3), (byte)1);
-        chunkManager.setBlockAt(new Vector3i(22, 9, 4), (byte)1); // vertical jump
-        chunkManager.setBlockAt(new Vector3i(26, 9, 4), (byte)1);
-        chunkManager.setBlockAt(new Vector3i(30, 8, 4), (byte)1);
-        chunkManager.setBlockAt(new Vector3i(33, 8, 4), (byte)1);
-        chunkManager.setBlockAt(new Vector3i(36, 8, 4), (byte)1);
-        chunkManager.setBlockAt(new Vector3i(39, 8, 4), (byte)1);
-        chunkManager.setBlockAt(new Vector3i(42, 8, 4), (byte)1);
-        chunkManager.setBlockAt(new Vector3i(45, 8, 4), (byte)1);
-        chunkManager.setBlockAt(new Vector3i(48, 8, 4), (byte)1);
-        chunkManager.setBlockAt(new Vector3i(51, 8, 4), (byte)1);
-        chunkManager.setBlockAt(new Vector3i(54, 8, 4), (byte)1);
+        chunkManager.setBlockAt(new Vector3i(0, 4, 0), (byte)1);
+        chunkManager.setBlockAt(new Vector3i(1, 4, 0), (byte)1);
+        chunkManager.setBlockAt(new Vector3i(2, 4, 0), (byte)1);
+        chunkManager.setBlockAt(new Vector3i(5, 4, 0), (byte)1);
+        chunkManager.setBlockAt(new Vector3i(8, 4, 0), (byte)1);
+        chunkManager.setBlockAt(new Vector3i(12, 4, 0), (byte)1);
+        chunkManager.setBlockAt(new Vector3i(16, 4, 0), (byte)1);
+        chunkManager.setBlockAt(new Vector3i(16, 4, 2), (byte)1);
+        chunkManager.setBlockAt(new Vector3i(19, 4, 3), (byte)1);
+        chunkManager.setBlockAt(new Vector3i(22, 4, 4), (byte)1); // vertical jump
+        chunkManager.setBlockAt(new Vector3i(26, 4, 4), (byte)1);
+        chunkManager.setBlockAt(new Vector3i(30, 4, 4), (byte)1);
+        chunkManager.setBlockAt(new Vector3i(33, 4, 4), (byte)1);
+        chunkManager.setBlockAt(new Vector3i(36, 4, 4), (byte)1);
+        chunkManager.setBlockAt(new Vector3i(39, 4, 4), (byte)1);
+        chunkManager.setBlockAt(new Vector3i(42, 4, 4), (byte)1);
+        chunkManager.setBlockAt(new Vector3i(45, 4, 4), (byte)1);
+        chunkManager.setBlockAt(new Vector3i(48, 4, 4), (byte)1);
+        chunkManager.setBlockAt(new Vector3i(51, 4, 4), (byte)1);
+        chunkManager.setBlockAt(new Vector3i(54, 4, 4), (byte)1);
     }
 
     public void render(){

@@ -13,7 +13,6 @@ public abstract class Entity {
     private static final float GRAVITY_CONSTANT = 9.81f;
     protected Transform transform;
     protected Vector3f velocity;
-    protected Collider collider;
 
     protected Mesh mesh;
 
@@ -22,7 +21,6 @@ public abstract class Entity {
     protected Entity(Transform transform){
         this.transform = transform;
         this.velocity = new Vector3f(0,0,0);
-        this.collider = new Collider(transform);
 
     }
 
