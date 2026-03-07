@@ -17,7 +17,7 @@ public class Chunk {
     public ChunkManager chunkManager;
 
     public static final int CHUNK_SIZE = 16;
-    public static final int CHUNK_HEIGHT = 128;
+    public static final int CHUNK_HEIGHT = 256;
 
     private float[][] topTextureMapping;
     private float[][] bottomTextureMapping;
@@ -122,6 +122,7 @@ public class Chunk {
 //    }
 
 
+
     public void buildMesh(){
         vertices = new ArrayList<>();
 
@@ -133,6 +134,21 @@ public class Chunk {
             for(int y = 0 ; y < CHUNK_HEIGHT; y++){
                 for(int z = 0 ; z < CHUNK_SIZE; z++){
                     if(blocks[x][y][z] != 0){
+                        //TODO FIX REPETITION
+                        if(blocks[x][y][z] == 1){
+                            topTextureMapping = TextureAtlas.topTextureMapping(TextureAtlas.BlockTextures.GRASS);
+                            bottomTextureMapping = TextureAtlas.bottomTextureMapping(TextureAtlas.BlockTextures.GRASS);
+                            sideTextureMapping = TextureAtlas.sideTextureMapping(TextureAtlas.BlockTextures.GRASS);
+                        }if(blocks[x][y][z] == 2){
+                            topTextureMapping = TextureAtlas.topTextureMapping(TextureAtlas.BlockTextures.DIRT);
+                            bottomTextureMapping = TextureAtlas.bottomTextureMapping(TextureAtlas.BlockTextures.DIRT);
+                            sideTextureMapping = TextureAtlas.sideTextureMapping(TextureAtlas.BlockTextures.DIRT);
+                        }
+                        if(blocks[x][y][z] == 3){
+                            topTextureMapping = TextureAtlas.topTextureMapping(TextureAtlas.BlockTextures.STONE);
+                            bottomTextureMapping = TextureAtlas.bottomTextureMapping(TextureAtlas.BlockTextures.STONE);
+                            sideTextureMapping = TextureAtlas.sideTextureMapping(TextureAtlas.BlockTextures.STONE);
+                        }
                         addBlock(new Vector3f(x + worldX,y + worldY, z + worldZ), new Vector3i(x,y,z));
                     }
                 }

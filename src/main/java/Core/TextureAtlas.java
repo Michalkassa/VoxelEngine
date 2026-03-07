@@ -28,6 +28,8 @@ public class TextureAtlas {
 
     public static final Map<BlockTextures, int[]> TEXTURE_ATLAS_RELATIVE_INDEX = new HashMap<>() {{
         put(BlockTextures.GRASS, new int[]{ 10, 7, 6 });
+        put(BlockTextures.DIRT, new int[]{ 6, 6, 6 });
+        put(BlockTextures.STONE, new int[]{ 9,9,9 });
     }};
 
     private static final float[] CUBE_TEXTURE_MAPPING = {

@@ -1,6 +1,5 @@
 package Core;
 
-import Entity.TestEntity;
 import World.Chunk;
 import World.ChunkManager;
 import World.World;
@@ -59,8 +58,6 @@ public class Renderer {
 
         projection.perspective((float)Math.toRadians(80f), aspect_ratio, 0.1f, 512f);
 
-
-
         glEnable(GL_DEPTH_TEST);
         glEnable(GL_CULL_FACE);
         glCullFace(GL_BACK);
@@ -70,7 +67,6 @@ public class Renderer {
     public void update(float dt){
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         camera.update(dt);
-        world.update();
         shader.bind();
 
         camera.getViewMatrix(view);

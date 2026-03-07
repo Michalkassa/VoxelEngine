@@ -2,58 +2,77 @@ package World;
 
 import org.joml.Vector3i;
 
+import java.util.HashMap;
+
 public class RandomNoise {
     private final long seed;
-    private final int MAX_HEIGHT = 35;
-    private final int MIN_HEIGHT = 32;
+    private final int MAX_HEIGHT = 256;
+    private final int MIN_HEIGHT = 5;
+
+    private final HashMap<Long, Integer> heightCache = new HashMap<>();
 
     public RandomNoise(long seed) {
         this.seed = seed;
     }
 
     public double noise(double x, double z) {
-        // Add scale for smoother terrain
-        x *= 0.1;
-        z *= 0.1;
+        double amplitude = 1.0;
+        double frequency = 0.005;
+        double result = 0;
+        double maxValue = 0;
 
-        int X = (int)Math.floor(x);
-        int Z = (int)Math.floor(z);
+        // 4 octaves of value noise
+        for (int i = 0; i < 4; i++) {
+            result += valueNoise(x * frequency, z * frequency) * amplitude;
+            maxValue += amplitude;
+            amplitude *= 0.5;
+            frequency *= 2.0;
+        }
 
-        x -= Math.floor(x);
-        z -= Math.floor(z);
-
-        double u = x * x * (3 - 2 * x);
-        double v = z * z * (3 - 2 * z);
-
-        long h1 = hash(X, Z);
-        long h2 = hash(X + 1, Z);
-        long h3 = hash(X, Z + 1);
-        long h4 = hash(X + 1, Z + 1);
-
-        double g1 = (h1 & 1) == 0 ? x : -x;
-        double g2 = (h2 & 1) == 0 ? x - 1 : -(x - 1);
-        double g3 = (h3 & 1) == 0 ? x : -x;
-        double g4 = (h4 & 1) == 0 ? x - 1 : -(x - 1);
-
-        double l1 = g1 + u * (g2 - g1);
-        double l2 = g3 + u * (g4 - g3);
-
-        return l1 + v * (l2 - l1);
+        return result / maxValue;
     }
 
-    private long hash(int x, int z) {
+    private double valueNoise(double x, double z) {
+        int X = (int) Math.floor(x);
+        int Z = (int) Math.floor(z);
+
+        double fx = x - Math.floor(x);
+        double fz = z - Math.floor(z);
+
+        double ux = fx * fx * fx * (fx * (fx * 6 - 15) + 10);
+        double uz = fz * fz * fz * (fz * (fz * 6 - 15) + 10);
+
+        double v00 = hashToFloat(X,     Z);
+        double v10 = hashToFloat(X + 1, Z);
+        double v01 = hashToFloat(X,     Z + 1);
+        double v11 = hashToFloat(X + 1, Z + 1);
+
+        double x1 = v00 + ux * (v10 - v00);
+        double x2 = v01 + ux * (v11 - v01);
+
+        return x1 + uz * (x2 - x1);
+    }
+
+    private double hashToFloat(int x, int z) {
         long h = seed;
-        h = h * 374761393L + x;
-        h = h * 668265263L + z;
-        h = (h ^ (h >> 13)) * 1274126177L;
-        return h ^ (h >> 16);
+        h ^= x * 1619L;
+        h ^= z * 31337L;
+        h = (h * h * 60493L + h * 19990303L + 1376312589L) & 0x7fffffff;
+        return h / (double) 0x7fffffff;
     }
 
     public int getHeight(Vector3i position) {
-        double noiseValue = noise(position.x, position.z);
-        // Normalize from [-1, 1] to [0, 1]
-        noiseValue = (noiseValue + 1.0) * 0.5;
-        // Map to height range
-        return MIN_HEIGHT + (int)(MAX_HEIGHT * noiseValue);
+        long key = ((long) position.x << 32) | (position.z & 0xFFFFFFFFL);
+
+        if (heightCache.containsKey(key)) {
+            return heightCache.get(key);
+        }
+
+        double n = noise(position.x, position.z);
+        n = Math.pow(n, 1.5);
+        int height = MIN_HEIGHT + (int)(n * (MAX_HEIGHT - MIN_HEIGHT));
+
+        heightCache.put(key, height);
+        return height;
     }
 }

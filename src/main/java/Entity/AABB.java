@@ -9,6 +9,7 @@ public class AABB {
 
     public AABB(Vector3f min, Vector3f max) {
         this.min = new Vector3f(min);
+
         this.max = new Vector3f(max);
     }
 
@@ -26,9 +27,10 @@ public class AABB {
     }
 
     public boolean intersects(AABB other) {
-        return (this.min.x <= other.max.x && this.max.x >= other.min.x) &&
-                (this.min.y <= other.max.y && this.max.y >= other.min.y) &&
-                (this.min.z <= other.max.z && this.max.z >= other.min.z);
+        float e = 0.001f;
+        return (this.min.x < other.max.x - e && this.max.x > other.min.x + e) &&
+                (this.min.y < other.max.y - e && this.max.y > other.min.y + e) &&
+                (this.min.z < other.max.z - e && this.max.z > other.min.z + e);
     }
 
     public boolean contains(Vector3f point) {
@@ -114,9 +116,16 @@ public class AABB {
             return null;
         }
 
-        float xOverlap = Math.min(this.max.x - other.min.x, other.max.x - this.min.x);
-        float yOverlap = Math.min(this.max.y - other.min.y, other.max.y - this.min.y);
-        float zOverlap = Math.min(this.max.z - other.min.z, other.max.z - this.min.z);
+        float overlapXRight = other.max.x - this.min.x;
+        float overlapXLeft  = this.max.x - other.min.x;
+        float overlapYUp    = other.max.y - this.min.y;
+        float overlapYDown  = this.max.y - other.min.y;
+        float overlapZFront = other.max.z - this.min.z;
+        float overlapZBack  = this.max.z - other.min.z;
+
+        float xOverlap = overlapXLeft < overlapXRight ? -overlapXLeft : overlapXRight;
+        float yOverlap = overlapYDown < overlapYUp    ? -overlapYDown : overlapYUp;
+        float zOverlap = overlapZBack < overlapZFront ? -overlapZBack : overlapZFront;
 
         return new Vector3f(xOverlap, yOverlap, zOverlap);
     }
@@ -128,8 +137,8 @@ public class AABB {
 
     public static AABB blockAABB(int x, int y, int z) {
         return new AABB(
-                new Vector3f(x, y, z),
-                new Vector3f(x + 1, y + 1, z + 1)
+                new Vector3f(x,y,z),
+                0.5f,0.5f,0.5f
         );
     }
 }

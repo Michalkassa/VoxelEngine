@@ -4,18 +4,21 @@ import Core.Camera;
 import Core.Input;
 import Core.Transform;
 import World.Chunk;
+import World.ChunkManager;
 import org.joml.Vector3f;
 import org.lwjgl.glfw.GLFW;
 
-public class Player extends Entity implements Playable {
+public class Player extends Entity {
 
-    private static final float MOVE_SPEED = 8.0f;
-    private static final float JUMP_FORCE = 6.0f;
+    private static final float MOVE_SPEED = 6.0f;
+    private static final float JUMP_FORCE = 24f;
     private static final float MOUSE_SENSITIVITY = 0.1f;
-    private static final float CAMERA_HEIGHT = 1.7f; // Eye height offset
-    private static final float ACCELERATION = 40f;
-    private static final float FRICTION = 12f;
+    private static final float ACCELERATION = 50f;
+    private static final float GROUND_FRICTION = 30f;
+    private static final float AIR_FRICTION = 5f;
     private static final float AIR_CONTROL = 8f;
+
+
 
     private Camera camera;
 
@@ -25,8 +28,12 @@ public class Player extends Entity implements Playable {
     private Vector3f forward;
     private Vector3f right;
 
-    public Player(Vector3f position) {
-        super(new Transform(position));
+    private final float WIDTH = 0.75f;
+    private final float HEIGHT = 1.7f;
+    private final float LENGTH = 0.75f;
+
+    public Player(Vector3f position, Vector3f scale) {
+        super(new Transform(position,scale));
         this.forward = new Vector3f(0, 0, -1);
         this.right = new Vector3f(1, 0, 0);
         this.camera = new Camera(position, new Vector3f(0, 0, 0));
@@ -35,9 +42,9 @@ public class Player extends Entity implements Playable {
     }
 
     @Override
-    public void update(float dt, Chunk chunk) {
+    public void update(float dt, ChunkManager chunkManager) {
         handleInput(dt);
-        super.update(dt, chunk);
+        super.update(dt, chunkManager);
         updateCameraPosition();
     }
 
@@ -46,7 +53,6 @@ public class Player extends Entity implements Playable {
        return;
     }
 
-    @Override
     public void handleInput(float deltaTime) {
         // Mouse look
         float deltaX = Input.getMouseDeltaX() * MOUSE_SENSITIVITY;
@@ -91,9 +97,10 @@ public class Player extends Entity implements Playable {
                 velocity.z *= scale;
             }
         }
-        else if (onGround) {
-            velocity.x -= velocity.x * FRICTION * deltaTime;
-            velocity.z -= velocity.z * FRICTION * deltaTime;
+        else {
+            float friction = onGround ? GROUND_FRICTION : AIR_FRICTION;
+            velocity.x -= velocity.x * friction * deltaTime;
+            velocity.z -= velocity.z * friction * deltaTime;
 
             if (Math.abs(velocity.x) < 0.01f) velocity.x = 0;
             if (Math.abs(velocity.z) < 0.01f) velocity.z = 0;
@@ -105,7 +112,6 @@ public class Player extends Entity implements Playable {
         }
     }
 
-    @Override
     public void jump() {
         if (onGround) {
             System.out.println("Jump");
@@ -118,7 +124,7 @@ public class Player extends Entity implements Playable {
         // Set camera position at player's eye height
         Vector3f cameraPos = new Vector3f(
                 transform.position.x,
-                transform.position.y + CAMERA_HEIGHT,
+                transform.position.y + transform.scale.y/2,
                 transform.position.z
         );
         camera.setPosition(cameraPos);
@@ -128,24 +134,20 @@ public class Player extends Entity implements Playable {
         camera.setPitch((float) Math.toRadians(pitch));
     }
 
-    @Override
     public Vector3f getRotation() {
         return new Vector3f(pitch, yaw, 0);
     }
 
-    @Override
     public void setRotation(float yaw, float pitch) {
         this.yaw = yaw;
         this.pitch = pitch;
         updateDirectionVectors();
     }
 
-    @Override
     public Vector3f getForward() {
         return new Vector3f(forward);
     }
 
-    @Override
     public Vector3f getRight() {
         return new Vector3f(right);
     }
@@ -164,6 +166,7 @@ public class Player extends Entity implements Playable {
         right.z = (float) Math.sin(yawRad);
         right.normalize();
     }
+
 
     public Camera getCamera() {
         return camera;

@@ -11,8 +11,10 @@ public class Transform {
     public Vector3f scale    = new Vector3f(1,1,1);
 
 
-    public Transform (Vector3f position){
+    public Transform (Vector3f position,Vector3f scale) {
         this.position = position;
+        this.scale = scale;
+
     }
 
     public Matrix4f getMatrix() {
