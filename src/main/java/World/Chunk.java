@@ -17,7 +17,7 @@ public class Chunk {
     public ChunkManager chunkManager;
 
     public static final int CHUNK_SIZE = 16;
-    public static final int CHUNK_HEIGHT = 256;
+    public static final int CHUNK_HEIGHT = 100;
 
     private float[][] topTextureMapping;
     private float[][] bottomTextureMapping;
@@ -230,6 +230,12 @@ public class Chunk {
         blocks[x][y][z] = block_type;
         buildMesh();
     }
+
+    public boolean isOnBorder(int x, int z) {
+        return x == 0 || x == CHUNK_SIZE - 1 || z == 0 || z == CHUNK_SIZE - 1;
+    }
+
+    public Vector3i getChunkPosition() { return chunkPosition; }
 
     public void render(){
         ChunkMesh.draw();

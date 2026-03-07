@@ -54,6 +54,7 @@ public class World {
     }
 
     public void update(){
+        chunkManager.update();
         chunkManager.loadChunksInRadius(camera.getChunkPosition(), 10);
         chunkManager.unloadChunksOutOfRadius(camera.getChunkPosition(), 10);
     }

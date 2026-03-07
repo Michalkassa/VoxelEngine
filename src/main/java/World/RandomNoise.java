@@ -6,7 +6,7 @@ import java.util.HashMap;
 
 public class RandomNoise {
     private final long seed;
-    private final int MAX_HEIGHT = 256;
+    private final int MAX_HEIGHT = 100;
     private final int MIN_HEIGHT = 5;
 
     private final HashMap<Long, Integer> heightCache = new HashMap<>();
@@ -61,14 +61,14 @@ public class RandomNoise {
         return h / (double) 0x7fffffff;
     }
 
-    public int getHeight(Vector3i position) {
-        long key = ((long) position.x << 32) | (position.z & 0xFFFFFFFFL);
+    public int getHeight(int x, int z) {
+        long key = ((long) x << 32) | (z & 0xFFFFFFFFL);
 
         if (heightCache.containsKey(key)) {
             return heightCache.get(key);
         }
 
-        double n = noise(position.x, position.z);
+        double n = noise(x, z);
         n = Math.pow(n, 1.5);
         int height = MIN_HEIGHT + (int)(n * (MAX_HEIGHT - MIN_HEIGHT));
 

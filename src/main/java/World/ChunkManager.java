@@ -120,6 +120,7 @@ public class ChunkManager {
         }
     }
 
+
     public void unloadChunksOutOfRadius(Vector3i centre, int radius) {
         int centerX = centre.x;
         int centerZ = centre.z;
@@ -159,7 +160,7 @@ public class ChunkManager {
 
     public void renderChunks(){
         for(Chunk chunk : chunks.values()){
-            chunk.render();
+           chunk.render();
         }
     }
 

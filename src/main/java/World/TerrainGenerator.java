@@ -17,19 +17,22 @@ public class TerrainGenerator {
         return seed;
     }
 
-    public byte[][][] generateChunkTerrain(Vector3i chunkPosition){
+    public byte[][][] generateChunkTerrain(Vector3i chunkPosition) {
         byte[][][] blocks = new byte[Chunk.CHUNK_SIZE][Chunk.CHUNK_HEIGHT][Chunk.CHUNK_SIZE];
 
-        Vector3i worldPosition = new Vector3i(chunkPosition.x * Chunk.CHUNK_SIZE, 0 ,chunkPosition.z * Chunk.CHUNK_SIZE);
-        Random random = new Random(seed);
-        for( int x = 0 ; x < Chunk.CHUNK_SIZE; x++){
-            for (int z = 0 ; z< Chunk.CHUNK_SIZE; z++){
-                int height = noise.getHeight(new Vector3i(worldPosition.x + x,0 ,worldPosition.z + z));
+        int worldX = chunkPosition.x * Chunk.CHUNK_SIZE;
+        int worldZ = chunkPosition.z * Chunk.CHUNK_SIZE;
 
-                for (int y = 0; y < height ; y++) {
-                    if( y > random.nextInt(256-100)+100){
+        int stoneThreshold = 70;
+
+        for (int x = 0; x < Chunk.CHUNK_SIZE; x++) {
+            for (int z = 0; z < Chunk.CHUNK_SIZE; z++) {
+                int height = noise.getHeight(worldX + x, worldZ + z);
+
+                for (int y = 0; y < height; y++) {
+                    if (y > stoneThreshold) {
                         blocks[x][y][z] = (byte) Block.STONE.ordinal();
-                    }else if (y == height - 1) {
+                    } else if (y == height - 1) {
                         blocks[x][y][z] = (byte) Block.GRASS.ordinal();
                     } else {
                         blocks[x][y][z] = (byte) Block.DIRT.ordinal();
@@ -37,7 +40,6 @@ public class TerrainGenerator {
                 }
             }
         }
-
         return blocks;
     }
 }

@@ -28,32 +28,7 @@ public class Camera {
         this.right = new Vector3f();
     }
 
-//    private void movement(float dt){
-//
-//        if (Input.isKeyDown(GLFW_KEY_W)){
-//            position.add(new Vector3f(direction).mul(CAMERA_MOVEMENT_SPEED * dt));
-//        }
-//        if (Input.isKeyDown(GLFW_KEY_S)){
-//            position.sub(new Vector3f(direction).mul(CAMERA_MOVEMENT_SPEED * dt));
-//        }
-//        if (Input.isKeyDown(GLFW_KEY_A)){
-//            position.sub(new Vector3f(right).mul(CAMERA_MOVEMENT_SPEED * dt));
-//        }
-//        if (Input.isKeyDown(GLFW_KEY_D)){
-//            position.add(new Vector3f(right).mul(CAMERA_MOVEMENT_SPEED * dt));
-//        }
-//        if (Input.isKeyDown(GLFW_KEY_SPACE)){
-//            position.add(new Vector3f(world_up).mul(CAMERA_MOVEMENT_SPEED * dt));
-//        }
-//        if (Input.isKeyDown(GLFW_KEY_LEFT_SHIFT)){
-//            position.sub(new Vector3f(world_up).mul(CAMERA_MOVEMENT_SPEED * dt));
-//        }
-//
-//    }
-
     private void setDirection(float dt){
-//        camera_yaw += Input.getMouseDeltaX() * CAMERA_SENSITIVITY ;
-//        camera_pitch -= Input.getMouseDeltaY() * CAMERA_SENSITIVITY ;
 
         if (camera_pitch > 89) camera_pitch = 89;
         if (camera_pitch < -89) camera_pitch = -89;
@@ -92,9 +67,6 @@ public class Camera {
         );
     }
 
-    public Vector3f getPosition(){
-        return position;
-    }
     public void setPosition(Vector3f position) {
         this.position = position;
     }
