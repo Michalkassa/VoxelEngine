@@ -1,10 +1,8 @@
 package World;
 
 import Core.Camera;
-import Exceptions.NullSaveFileLoadException;
+import Entity.Player;
 import Storage.FileCreator;
-import Storage.FileLoader;
-import Storage.Save;
 import Storage.SaveManager;
 import org.joml.Vector3i;
 
@@ -16,33 +14,37 @@ public class World {
     private ChunkManager chunkManager;
     private Camera camera;
     private SaveManager saveManager;
+    private ChunkLoader chunkLoader;
+    private Player player;
+    private final int INITIAL_RENDER_DISTANCE = 5;
+    private final int RENDER_DISTANCE = 40;
 
-    public World(String name, Camera camera, long seed) {
+    public World(String name, Camera camera, Player player, long seed) {
         this.name = name;
         this.seed = seed;
         this.camera = camera;
+        this.player = player;
+        this.chunkManager = new ChunkManager(seed);
+        this.saveManager = new SaveManager(name);
 
-        if(FileCreator.worldExists(name)){
-            try{
-                Save save = FileLoader.LoadSave(name);
-                saveManager.LoadSave(save);
-            }catch(IOException | NullSaveFileLoadException e){
-                System.err.println("Cannot Load save from world: " + name);
-                System.err.println(e.getMessage());
-            }
-        }else{
-            try{
+        // Create world directory if needed
+        if (!FileCreator.worldExists(name)) {
+            try {
                 FileCreator.createWorldDirectory(name);
-            }catch (IOException e){
+                System.out.println("Created new world: " + name);
+            } catch (IOException e){
                 System.err.println("Cannot create world: " + name);
                 System.err.println(e.getMessage());
             }
         }
 
-        this.chunkManager = new ChunkManager(seed);
-        this.saveManager = new SaveManager(name);
+        // Load initial chunks around spawn
+        Vector3i spawnChunk = new Vector3i(0, 0, 0);
+        chunkManager.loadChunksInRadius(spawnChunk, INITIAL_RENDER_DISTANCE);
 
-        chunkManager.loadChunksInRadius(camera.getChunkPosition(), 10);
+        // Start chunk loader thread
+        chunkLoader = new ChunkLoader(chunkManager, player, RENDER_DISTANCE);
+        chunkLoader.start();
     }
 
     public void render(){
@@ -54,9 +56,8 @@ public class World {
     }
 
     public void update(){
-        chunkManager.update();
-        chunkManager.loadChunksInRadius(camera.getChunkPosition(), 10);
-        chunkManager.unloadChunksOutOfRadius(camera.getChunkPosition(), 10);
+        // ChunkLoader thread handles chunk loading/unloading automatically
+        chunkManager.buildQueuedMeshes();
     }
 
     public int getSurfaceHeight(Vector3i worldPosition){
@@ -69,7 +70,12 @@ public class World {
     }
 
     public void cleanup(){
+        chunkLoader.stopLoading();
         chunkManager.cleanup();
+    }
+
+    public SaveManager getSaveManager() {
+        return saveManager;
     }
 
 }

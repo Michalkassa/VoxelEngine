@@ -14,11 +14,11 @@ public class TextureAtlas {
     public enum BlockTextures {
         GRASS,
         DIRT,
+        STONE,
         SAND,
         SNOW,
         WOOD,
         LEAF,
-        STONE,
     }
 
 
@@ -42,7 +42,17 @@ public class TextureAtlas {
     };
 
     public static float[][] topTextureMapping(BlockTextures BlockTexture) {
-        int index = TEXTURE_ATLAS_RELATIVE_INDEX.get(BlockTexture)[0];
+        int[] indices = TEXTURE_ATLAS_RELATIVE_INDEX.get(BlockTexture);
+
+        if (indices == null) {
+            System.err.println("Warning: No texture mapping found for " + BlockTexture + ", using default");
+            indices = TEXTURE_ATLAS_RELATIVE_INDEX.get(BlockTextures.DIRT);
+            if (indices == null) {
+                indices = new int[]{0};
+            }
+        }
+
+        int index = indices[0];
         int tileX = index % RELATIVE_ATLAS_WIDTH;
         int tileY = index / RELATIVE_ATLAS_WIDTH;
 

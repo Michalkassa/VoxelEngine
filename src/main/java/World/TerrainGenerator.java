@@ -23,10 +23,11 @@ public class TerrainGenerator {
         int worldX = chunkPosition.x * Chunk.CHUNK_SIZE;
         int worldZ = chunkPosition.z * Chunk.CHUNK_SIZE;
 
-        int stoneThreshold = 70;
+        int stoneThreshold = 50;
 
         for (int x = 0; x < Chunk.CHUNK_SIZE; x++) {
             for (int z = 0; z < Chunk.CHUNK_SIZE; z++) {
+                //TODO BIGGEST BOTTLE NECK
                 int height = noise.getHeight(worldX + x, worldZ + z);
 
                 for (int y = 0; y < height; y++) {

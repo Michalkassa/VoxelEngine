@@ -1,32 +1,41 @@
 package World;
 
+import World.Chunk;
+import World.TerrainGenerator;
 import org.joml.Vector2i;
 import org.joml.Vector3f;
 import org.joml.Vector3i;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Vector;
+import java.util.*;
 import java.lang.Math;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 //TODO FIX performance problems with multithreading
 public class ChunkManager {
 
     private Map<Vector3i,Chunk> chunks;
     private TerrainGenerator terrainGenerator;
+    private Set<Vector3i> visitedChunks;
+    private Map<Vector3i, byte[][][]> chunkDataCache;
+    private Queue<Vector3i> chunksToBuild = new ConcurrentLinkedQueue<>();
+    private Map<Vector3i, Chunk> chunksToCleanup = new ConcurrentHashMap<>();
     private  long seed;
 
+
     public ChunkManager(long seed){
-        this.chunks = new HashMap<>();
+        this.chunks = new ConcurrentHashMap<>();  // Thread-safe
+        this.visitedChunks = Collections.synchronizedSet(new HashSet<>());
+        this.chunkDataCache = new ConcurrentHashMap<>();
         this.terrainGenerator = new TerrainGenerator(seed);
     }
 
     public void loadChunk(Vector3i position){
-            if(!chunks.containsKey(position)){
-                Chunk chunk;
+        if(!chunks.containsKey(position)){
+            Chunk chunk;
 
-                // Try to load saved chunk data
-                //ChunkData savedData = chunkStorage.loadChunk(position);
+            // Try to load saved chunk data
+            //ChunkData savedData = chunkStorage.loadChunk(position);
 
 //                if (savedData != null) {
 //                    // Load from saved data
@@ -34,22 +43,22 @@ public class ChunkManager {
 //                    System.out.println("Loaded chunk from disk: " + position);
 //                }
 
-                    // Generate new chunk using terrain generator
-                byte[][][] generatedBlocks = terrainGenerator.generateChunkTerrain(position);
-                chunk = new Chunk(position, this, generatedBlocks);
+            // Generate new chunk using terrain generator
+            byte[][][] generatedBlocks = terrainGenerator.generateChunkTerrain(position);
+            chunk = new Chunk(position, this, generatedBlocks);
 
-                chunks.put(position, chunk);
-                chunk.buildMesh();
-                rebuildAdjacentChunks(position);
-            }
-    }
-
-    public void unloadChunk(Vector3i position){
-        Chunk chunk = chunks.remove(position);
-        if(chunk != null){
-            chunk.cleanup();
+            chunks.put(position, chunk);
+            chunk.buildMesh();
+            rebuildAdjacentChunks(position);
         }
     }
+
+//    public void unloadChunk(Vector3i position){
+//        Chunk chunk = chunks.remove(position);
+//        if(chunk != null){
+//            chunk.cleanup();
+//        }
+//    }
 
     public Chunk getChunk(Vector3f world_position) {
         int chunkX = Math.floorDiv((int) world_position.x, Chunk.CHUNK_SIZE);
@@ -112,10 +121,13 @@ public class ChunkManager {
         rebuildAdjacentChunks(chunkCoordinates);
     }
 
-    public void loadChunksInRadius(Vector3i centre, int radius){
-        for (int x = centre.x - radius; x <= centre.x + radius; x++){
-            for(int z = centre.z - radius; z <= centre.z + radius; z++){
-                loadChunk(new Vector3i(x,0,z));
+    public void loadChunksInRadius(Vector3i centre, int radius) {
+        for (int x = centre.x - radius; x <= centre.x + radius; x++) {
+            for (int z = centre.z - radius; z <= centre.z + radius; z++) {
+                Vector3i pos = new Vector3i(x, 0, z);
+                if (!chunks.containsKey(pos)) {
+                    loadChunk(pos);
+                }
             }
         }
     }
@@ -142,7 +154,7 @@ public class ChunkManager {
     }
 
 
-        private void rebuildAdjacentChunks(Vector3i position) {
+    private void rebuildAdjacentChunks(Vector3i position) {
         Vector3i[] neighbors = {
                 new Vector3i(position.x + 1, 0, position.z),  // North (X+)
                 new Vector3i(position.x - 1, 0, position.z),  // South (X-)
@@ -160,8 +172,87 @@ public class ChunkManager {
 
     public void renderChunks(){
         for(Chunk chunk : chunks.values()){
-           chunk.render();
+            chunk.render();
         }
+    }
+
+    public void loadChunkAsync(Vector3i position) {
+        if (!chunks.containsKey(position)) {
+            Chunk chunk;
+
+            if (visitedChunks.contains(position)) {
+                byte[][][] savedBlocks = chunkDataCache.get(position);
+                chunk = new Chunk(position, this, savedBlocks);
+            } else {
+                byte[][][] generatedBlocks = terrainGenerator.generateChunkTerrain(position);
+                chunk = new Chunk(position, this, generatedBlocks);
+                visitedChunks.add(position);
+            }
+
+            chunks.put(position, chunk);
+            chunksToBuild.add(position);  // Queue for mesh building on main thread
+        }
+    }
+
+    public void buildQueuedMeshes() {
+        int meshesBuilt = 0;
+        int maxMeshesPerFrame = 2;
+
+        while (!chunksToBuild.isEmpty() && meshesBuilt < maxMeshesPerFrame) {
+            Vector3i chunkPos = chunksToBuild.poll();
+            if (chunkPos != null) {
+                Chunk chunk = chunks.get(chunkPos);
+                if (chunk != null) {
+                    chunk.buildMesh();
+                    rebuildAdjacentChunks(chunkPos);
+                    meshesBuilt++;
+                }
+            }
+        }
+    }
+
+
+    public void unloadChunk(Vector3i position){
+        Chunk chunk = chunks.remove(position);
+        if(chunk != null){
+            // Save chunk data
+            byte[][][] blocks = new byte[Chunk.CHUNK_SIZE][Chunk.CHUNK_HEIGHT][Chunk.CHUNK_SIZE];
+
+            for (int x = 0; x < Chunk.CHUNK_SIZE; x++) {
+                for (int y = 0; y < Chunk.CHUNK_HEIGHT; y++) {
+                    for (int z = 0; z < Chunk.CHUNK_SIZE; z++) {
+                        blocks[x][y][z] = chunk.getBlock(x, y, z);
+                    }
+                }
+            }
+
+            chunkDataCache.put(position, blocks);
+            chunksToCleanup.put(position, chunk);  // Store for cleanup on main thread
+        }
+    }
+
+    public void cleanupQueuedChunks() {
+        int chunksCleanedUp = 0;
+        int maxCleanupsPerFrame = 4;
+
+        for (Vector3i pos : chunksToCleanup.keySet()) {
+            if (chunksCleanedUp >= maxCleanupsPerFrame) break;
+
+            Chunk chunk = chunksToCleanup.remove(pos);
+            if (chunk != null) {
+                chunk.cleanup();  // Now safe - on main thread
+                chunksCleanedUp++;
+            }
+        }
+    }
+
+
+    public boolean isChunkLoaded(Vector3i position) {
+        return chunks.containsKey(position);
+    }
+
+    public Set<Vector3i> getLoadedChunks() {
+        return new HashSet<>(chunks.keySet());
     }
 
     public void cleanup() {

@@ -21,14 +21,14 @@ public class Game {
 
 
     private void init(){
-        window = new Window(1280,720, "VoxelEngine");
+        window = new Window(1920,1080, "VoxelEngine");
         window.create();
 
         glfwMakeContextCurrent(window.getWindowId());
         GL.createCapabilities();
 
-        player = new Player(new Vector3f(0, 20, 0), new Vector3f(0.75f, 1.7f, 0.75f ));
-        world = new World("myWorld", player.getCamera(), 1);
+        player = new Player(new Vector3f(0, 100, 0), new Vector3f(0.75f, 1.7f, 0.75f ));
+        world = new World("MyWorld", player.getCamera(), player, System.currentTimeMillis());
         player.setPosition(new Vector3f(0,world.getSurfaceHeight(new Vector3i(0,0,0))+1,0));
         renderer = new Renderer(world, player.getCamera());
 
@@ -48,8 +48,6 @@ public class Game {
 
             total += (int) 1/deltaTime;
             count++;
-
-
 
             window.update();
             world.update();

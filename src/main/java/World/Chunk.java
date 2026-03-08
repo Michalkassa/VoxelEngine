@@ -94,7 +94,7 @@ public class Chunk {
         bottomTextureMapping = TextureAtlas.bottomTextureMapping(TextureAtlas.BlockTextures.GRASS);
         sideTextureMapping = TextureAtlas.sideTextureMapping(TextureAtlas.BlockTextures.GRASS);
 
-        buildMesh();
+        //buildMesh();
     }
 
     public byte getBlock(int x, int y, int z){
@@ -122,6 +122,15 @@ public class Chunk {
 //    }
 
 
+    private void generateTextureMappingsForBlock(byte blockType) {
+        TextureAtlas.BlockTextures texture = TextureAtlas.BlockTextures.values()[blockType - 1];
+        topTextureMapping = TextureAtlas.topTextureMapping(texture);
+        bottomTextureMapping = TextureAtlas.bottomTextureMapping(texture);
+        sideTextureMapping = TextureAtlas.sideTextureMapping(texture);
+    }
+
+
+
 
     public void buildMesh(){
         vertices = new ArrayList<>();
@@ -134,21 +143,7 @@ public class Chunk {
             for(int y = 0 ; y < CHUNK_HEIGHT; y++){
                 for(int z = 0 ; z < CHUNK_SIZE; z++){
                     if(blocks[x][y][z] != 0){
-                        //TODO FIX REPETITION
-                        if(blocks[x][y][z] == 1){
-                            topTextureMapping = TextureAtlas.topTextureMapping(TextureAtlas.BlockTextures.GRASS);
-                            bottomTextureMapping = TextureAtlas.bottomTextureMapping(TextureAtlas.BlockTextures.GRASS);
-                            sideTextureMapping = TextureAtlas.sideTextureMapping(TextureAtlas.BlockTextures.GRASS);
-                        }if(blocks[x][y][z] == 2){
-                            topTextureMapping = TextureAtlas.topTextureMapping(TextureAtlas.BlockTextures.DIRT);
-                            bottomTextureMapping = TextureAtlas.bottomTextureMapping(TextureAtlas.BlockTextures.DIRT);
-                            sideTextureMapping = TextureAtlas.sideTextureMapping(TextureAtlas.BlockTextures.DIRT);
-                        }
-                        if(blocks[x][y][z] == 3){
-                            topTextureMapping = TextureAtlas.topTextureMapping(TextureAtlas.BlockTextures.STONE);
-                            bottomTextureMapping = TextureAtlas.bottomTextureMapping(TextureAtlas.BlockTextures.STONE);
-                            sideTextureMapping = TextureAtlas.sideTextureMapping(TextureAtlas.BlockTextures.STONE);
-                        }
+                        generateTextureMappingsForBlock(blocks[x][y][z]);
                         addBlock(new Vector3f(x + worldX,y + worldY, z + worldZ), new Vector3i(x,y,z));
                     }
                 }
@@ -238,11 +233,15 @@ public class Chunk {
     public Vector3i getChunkPosition() { return chunkPosition; }
 
     public void render(){
-        ChunkMesh.draw();
+        if (ChunkMesh != null) {
+            ChunkMesh.draw();
+        }
     }
 
     public void cleanup(){
-        ChunkMesh.cleanup();
+        if (ChunkMesh != null) {
+            ChunkMesh.cleanup();
+        }
     }
 
 }

@@ -7,7 +7,7 @@ import java.util.HashMap;
 public class RandomNoise {
     private final long seed;
     private final int MAX_HEIGHT = 100;
-    private final int MIN_HEIGHT = 5;
+    private final int MIN_HEIGHT = 1;
 
     private final HashMap<Long, Integer> heightCache = new HashMap<>();
 
@@ -69,7 +69,7 @@ public class RandomNoise {
         }
 
         double n = noise(x, z);
-        n = Math.pow(n, 1.5);
+        n = Math.pow(n, 2);
         int height = MIN_HEIGHT + (int)(n * (MAX_HEIGHT - MIN_HEIGHT));
 
         heightCache.put(key, height);

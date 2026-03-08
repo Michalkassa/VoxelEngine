@@ -10,7 +10,7 @@ import org.lwjgl.glfw.GLFW;
 
 public class Player extends Entity {
 
-    private static final float MOVE_SPEED = 6.0f;
+    private static final float MOVE_SPEED = 18.0f;
     private static final float JUMP_FORCE = 24f;
     private static final float MOUSE_SENSITIVITY = 0.1f;
     private static final float ACCELERATION = 50f;
