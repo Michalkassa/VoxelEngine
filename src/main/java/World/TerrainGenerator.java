@@ -1,20 +1,29 @@
 package World;
 
 import org.joml.Random;
+import org.joml.Vector2d;
 import org.joml.Vector3i;
 
 
 public class TerrainGenerator {
-    RandomNoise noise;
+    PerlinNoise noise;
     private long seed;
+    private final int MAX_HEIGHT = 256;
+    private final int MIN_HEIGHT = 10;
+    private final int STONE_THRESHOLD = 65;
 
     public TerrainGenerator(long seed){
         this.seed = seed;
-        this.noise = new RandomNoise(seed);
+        this.noise = new PerlinNoise(seed);
     }
 
     public long getSeed() {
         return seed;
+    }
+
+    public int getHeight(float noiseValue) {
+        double normalizedNoise = Math.pow((noiseValue + 1.0f) / 2.0f, 3);
+        return (int) (MIN_HEIGHT + normalizedNoise * (MAX_HEIGHT - MIN_HEIGHT));
     }
 
     public byte[][][] generateChunkTerrain(Vector3i chunkPosition) {
@@ -23,15 +32,12 @@ public class TerrainGenerator {
         int worldX = chunkPosition.x * Chunk.CHUNK_SIZE;
         int worldZ = chunkPosition.z * Chunk.CHUNK_SIZE;
 
-        int stoneThreshold = 50;
-
         for (int x = 0; x < Chunk.CHUNK_SIZE; x++) {
             for (int z = 0; z < Chunk.CHUNK_SIZE; z++) {
-                //TODO BIGGEST BOTTLE NECK
-                int height = noise.getHeight(worldX + x, worldZ + z);
+                int height = getHeight(noise.getOctaveNoise(new Vector2d(worldX + x, worldZ + z)));
 
                 for (int y = 0; y < height; y++) {
-                    if (y > stoneThreshold) {
+                    if (y > STONE_THRESHOLD) {
                         blocks[x][y][z] = (byte) Block.STONE.ordinal();
                     } else if (y == height - 1) {
                         blocks[x][y][z] = (byte) Block.GRASS.ordinal();
@@ -43,4 +49,5 @@ public class TerrainGenerator {
         }
         return blocks;
     }
+
 }

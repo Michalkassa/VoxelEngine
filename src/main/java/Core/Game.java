@@ -28,7 +28,7 @@ public class Game {
         GL.createCapabilities();
 
         player = new Player(new Vector3f(0, 100, 0), new Vector3f(0.75f, 1.7f, 0.75f ));
-        world = new World("MyWorld", player.getCamera(), player, System.currentTimeMillis());
+        world = new World("MyWorld", player.getCamera(), player, 2);
         player.setPosition(new Vector3f(0,world.getSurfaceHeight(new Vector3i(0,0,0))+1,0));
         renderer = new Renderer(world, player.getCamera());
 

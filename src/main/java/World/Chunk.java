@@ -17,7 +17,7 @@ public class Chunk {
     public ChunkManager chunkManager;
 
     public static final int CHUNK_SIZE = 16;
-    public static final int CHUNK_HEIGHT = 100;
+    public static final int CHUNK_HEIGHT = 256;
 
     private float[][] topTextureMapping;
     private float[][] bottomTextureMapping;
