@@ -93,8 +93,6 @@ public class Chunk {
         topTextureMapping = TextureAtlas.topTextureMapping(TextureAtlas.BlockTextures.GRASS);
         bottomTextureMapping = TextureAtlas.bottomTextureMapping(TextureAtlas.BlockTextures.GRASS);
         sideTextureMapping = TextureAtlas.sideTextureMapping(TextureAtlas.BlockTextures.GRASS);
-
-        //buildMesh();
     }
 
     public byte getBlock(int x, int y, int z){
@@ -133,6 +131,11 @@ public class Chunk {
 
 
     public void buildMesh(){
+
+        if (ChunkMesh != null) {
+            ChunkMesh.cleanup();
+        }
+
         vertices = new ArrayList<>();
 
         float worldX =  chunkPosition.x * CHUNK_SIZE;

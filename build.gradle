@@ -99,6 +99,11 @@ dependencies {
     implementation "org.lwjgl:lwjgl-xxhash::$lwjglNatives"
     implementation "org.lwjgl:lwjgl-yoga::$lwjglNatives"
     implementation "org.lwjgl:lwjgl-zstd::$lwjglNatives"
+    implementation "org.lwjgl:lwjgl-nanovg:3.3.6"
+    runtimeOnly "org.lwjgl:lwjgl-nanovg::natives-windows"
+    runtimeOnly "org.lwjgl:lwjgl-nanovg::natives-macos"
+    runtimeOnly "org.lwjgl:lwjgl-nanovg::natives-macos-arm64"
+    runtimeOnly "org.lwjgl:lwjgl-nanovg::natives-linux"
 }
 
 test {

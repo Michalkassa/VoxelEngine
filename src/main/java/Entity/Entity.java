@@ -150,4 +150,8 @@ public abstract class Entity {
     public void cleanup(){
         mesh.cleanup();
     }
+
+    public Vector3f getVelocity() {
+        return velocity;
+    }
 }

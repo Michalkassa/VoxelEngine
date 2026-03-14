@@ -10,8 +10,8 @@ import org.lwjgl.glfw.GLFW;
 
 public class Player extends Entity {
 
-    private static final float MOVE_SPEED = 18.0f;
-    private static final float JUMP_FORCE = 24f;
+    private static final float MOVE_SPEED = 9.0f;
+    private static final float JUMP_FORCE = 28f;
     private static final float MOUSE_SENSITIVITY = 0.1f;
     private static final float ACCELERATION = 50f;
     private static final float GROUND_FRICTION = 30f;
@@ -168,15 +168,12 @@ public class Player extends Entity {
     }
 
 
+    public Vector3f getPosition() {
+        return new Vector3f(transform.position.x, transform.position.y, transform.position.z);
+    }
+
     public Camera getCamera() {
         return camera;
     }
 
-    public float getYaw() {
-        return yaw;
-    }
-
-    public float getPitch() {
-        return pitch;
-    }
 }

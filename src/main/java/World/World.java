@@ -1,6 +1,7 @@
 package World;
 
 import Core.Camera;
+import Core.Frustum;
 import Entity.Player;
 import Storage.FileCreator;
 import Storage.SaveManager;
@@ -16,7 +17,7 @@ public class World {
     private SaveManager saveManager;
     private ChunkLoader chunkLoader;
     private Player player;
-    private final int INITIAL_RENDER_DISTANCE = 5;
+    private final int INITIAL_RENDER_DISTANCE = 20;
     private final int RENDER_DISTANCE = 40;
 
     public World(String name, Camera camera, Player player, long seed) {
@@ -47,8 +48,8 @@ public class World {
         chunkLoader.start();
     }
 
-    public void render(){
-        chunkManager.renderChunks();
+    public void render(Frustum frustum) {
+        chunkManager.renderChunks(frustum);
     }
 
     public ChunkManager getChunkManager(){

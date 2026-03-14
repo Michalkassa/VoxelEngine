@@ -1,8 +1,6 @@
 package World;
 
-import World.Chunk;
-import World.TerrainGenerator;
-import org.joml.Vector2i;
+import Core.Frustum;
 import org.joml.Vector3f;
 import org.joml.Vector3i;
 
@@ -11,110 +9,80 @@ import java.lang.Math;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-//TODO FIX performance problems with multithreading
 public class ChunkManager {
 
-    private Map<Vector3i,Chunk> chunks;
+    private Map<Vector3i, Chunk> chunks;
     private TerrainGenerator terrainGenerator;
-    private Set<Vector3i> visitedChunks;
-    private Map<Vector3i, byte[][][]> chunkDataCache;
     private Queue<Vector3i> chunksToBuild = new ConcurrentLinkedQueue<>();
     private Map<Vector3i, Chunk> chunksToCleanup = new ConcurrentHashMap<>();
-    private  long seed;
+    private long seed;
 
-
-    public ChunkManager(long seed){
-        this.chunks = new ConcurrentHashMap<>();  // Thread-safe
-        this.visitedChunks = Collections.synchronizedSet(new HashSet<>());
-        this.chunkDataCache = new ConcurrentHashMap<>();
+    public ChunkManager(long seed) {
+        this.chunks = new ConcurrentHashMap<>();
         this.terrainGenerator = new TerrainGenerator(seed);
     }
 
-    public void loadChunk(Vector3i position){
-        if(!chunks.containsKey(position)){
-            Chunk chunk;
-
-            // Try to load saved chunk data
-            //ChunkData savedData = chunkStorage.loadChunk(position);
-
-//                if (savedData != null) {
-//                    // Load from saved data
-//                    chunk = new Chunk(position, this, savedData.getBlocks());
-//                    System.out.println("Loaded chunk from disk: " + position);
-//                }
-
-            // Generate new chunk using terrain generator
+    public void loadChunk(Vector3i position) {
+        if (!chunks.containsKey(position)) {
             byte[][][] generatedBlocks = terrainGenerator.generateChunkTerrain(position);
-            chunk = new Chunk(position, this, generatedBlocks);
-
+            Chunk chunk = new Chunk(position, this, generatedBlocks);
             chunks.put(position, chunk);
             chunk.buildMesh();
             rebuildAdjacentChunks(position);
         }
     }
 
-//    public void unloadChunk(Vector3i position){
-//        Chunk chunk = chunks.remove(position);
-//        if(chunk != null){
-//            chunk.cleanup();
-//        }
-//    }
-
     public Chunk getChunk(Vector3f world_position) {
         int chunkX = Math.floorDiv((int) world_position.x, Chunk.CHUNK_SIZE);
         int chunkZ = Math.floorDiv((int) world_position.z, Chunk.CHUNK_SIZE);
-
-        return getChunk(new Vector3i(chunkX,0, chunkZ));
+        return getChunk(new Vector3i(chunkX, 0, chunkZ));
     }
 
-    public Chunk getChunk(Vector3i position){
+    public Chunk getChunk(Vector3i position) {
         return chunks.get(position);
     }
 
-
-    public boolean isBlockAt(Vector3i world_position){
-        Vector3i chunkCoordinates = new Vector3i(Math.floorDiv(world_position.x, Chunk.CHUNK_SIZE),0, Math.floorDiv(world_position.z, Chunk.CHUNK_SIZE));
-        Vector3i localCoordinates = new Vector3i(Math.floorMod(world_position.x, Chunk.CHUNK_SIZE), world_position.y,Math.floorMod(world_position.z, Chunk.CHUNK_SIZE));
+    public boolean isBlockAt(Vector3i world_position) {
+        Vector3i chunkCoordinates = new Vector3i(Math.floorDiv(world_position.x, Chunk.CHUNK_SIZE), 0, Math.floorDiv(world_position.z, Chunk.CHUNK_SIZE));
+        Vector3i localCoordinates = new Vector3i(Math.floorMod(world_position.x, Chunk.CHUNK_SIZE), world_position.y, Math.floorMod(world_position.z, Chunk.CHUNK_SIZE));
 
         Chunk chunk = getChunk(chunkCoordinates);
 
-        if(chunk == null || localCoordinates.y < 0 || localCoordinates.y >= Chunk.CHUNK_HEIGHT){
-            return  false;
+        if (chunk == null || localCoordinates.y < 0 || localCoordinates.y >= Chunk.CHUNK_HEIGHT) {
+            return false;
         }
 
-        try{
+        try {
             return chunk.getBlock(localCoordinates.x, localCoordinates.y, localCoordinates.z) != 0;
         } catch (RuntimeException e) {
             return false;
         }
     }
 
-
-    public byte getBlockAt(Vector3i world_position){
-        Vector3i chunkCoordinates = new Vector3i(Math.floorDiv(world_position.x, Chunk.CHUNK_SIZE),0, Math.floorDiv(world_position.z, Chunk.CHUNK_SIZE));
-        Vector3i localCoordinates = new Vector3i(Math.floorMod(world_position.x, Chunk.CHUNK_SIZE), world_position.y,Math.floorMod(world_position.z, Chunk.CHUNK_SIZE));
+    public byte getBlockAt(Vector3i world_position) {
+        Vector3i chunkCoordinates = new Vector3i(Math.floorDiv(world_position.x, Chunk.CHUNK_SIZE), 0, Math.floorDiv(world_position.z, Chunk.CHUNK_SIZE));
+        Vector3i localCoordinates = new Vector3i(Math.floorMod(world_position.x, Chunk.CHUNK_SIZE), world_position.y, Math.floorMod(world_position.z, Chunk.CHUNK_SIZE));
 
         Chunk chunk = getChunk(chunkCoordinates);
 
-        if(chunk == null || localCoordinates.y < 0 || localCoordinates.y >= Chunk.CHUNK_HEIGHT){
+        if (chunk == null || localCoordinates.y < 0 || localCoordinates.y >= Chunk.CHUNK_HEIGHT) {
             return 0;
         }
 
-        try{
+        try {
             return chunk.getBlock(localCoordinates.x, localCoordinates.y, localCoordinates.z);
         } catch (RuntimeException e) {
             return 0;
         }
     }
 
-
-    public void setBlockAt(Vector3i world_position, byte block_type){
-        Vector3i chunkCoordinates = new Vector3i(Math.floorDiv(world_position.x, Chunk.CHUNK_SIZE),0, Math.floorDiv(world_position.z, Chunk.CHUNK_SIZE));
-        Vector3i localCoordinates = new Vector3i(Math.floorMod(world_position.x, Chunk.CHUNK_SIZE), world_position.y,Math.floorMod(world_position.z, Chunk.CHUNK_SIZE));
+    public void setBlockAt(Vector3i world_position, byte block_type) {
+        Vector3i chunkCoordinates = new Vector3i(Math.floorDiv(world_position.x, Chunk.CHUNK_SIZE), 0, Math.floorDiv(world_position.z, Chunk.CHUNK_SIZE));
+        Vector3i localCoordinates = new Vector3i(Math.floorMod(world_position.x, Chunk.CHUNK_SIZE), world_position.y, Math.floorMod(world_position.z, Chunk.CHUNK_SIZE));
 
         Chunk chunk = getChunk(chunkCoordinates);
 
-        if(chunk == null || localCoordinates.y < 0 || localCoordinates.y >= Chunk.CHUNK_HEIGHT){
+        if (chunk == null || localCoordinates.y < 0 || localCoordinates.y >= Chunk.CHUNK_HEIGHT) {
             throw new RuntimeException("Trying to set block that doesnt Exist");
         }
         chunk.setBlock(localCoordinates, block_type);
@@ -132,16 +100,12 @@ public class ChunkManager {
         }
     }
 
-
     public void unloadChunksOutOfRadius(Vector3i centre, int radius) {
-        int centerX = centre.x;
-        int centerZ = centre.z;
-
-        java.util.List<Vector3i> chunksToUnload = new java.util.ArrayList<>();
+        List<Vector3i> chunksToUnload = new ArrayList<>();
 
         for (Vector3i chunkPos : chunks.keySet()) {
-            int deltaX = Math.abs(chunkPos.x - centerX);
-            int deltaZ = Math.abs(chunkPos.z - centerZ);
+            int deltaX = Math.abs(chunkPos.x - centre.x);
+            int deltaZ = Math.abs(chunkPos.z - centre.z);
 
             if (deltaX > radius || deltaZ > radius) {
                 chunksToUnload.add(chunkPos);
@@ -153,13 +117,12 @@ public class ChunkManager {
         }
     }
 
-
     private void rebuildAdjacentChunks(Vector3i position) {
         Vector3i[] neighbors = {
-                new Vector3i(position.x + 1, 0, position.z),  // North (X+)
-                new Vector3i(position.x - 1, 0, position.z),  // South (X-)
-                new Vector3i(position.x, 0, position.z + 1),  // East (Z+)
-                new Vector3i(position.x, 0, position.z - 1)   // West (Z-)
+                new Vector3i(position.x + 1, 0, position.z),
+                new Vector3i(position.x - 1, 0, position.z),
+                new Vector3i(position.x, 0, position.z + 1),
+                new Vector3i(position.x, 0, position.z - 1)
         };
 
         for (Vector3i neighbor : neighbors) {
@@ -170,27 +133,28 @@ public class ChunkManager {
         }
     }
 
-    public void renderChunks(){
-        for(Chunk chunk : chunks.values()){
-            chunk.render();
+    public void renderChunks(Frustum frustum) {
+        for (Chunk chunk : chunks.values()) {
+            Vector3i pos = chunk.getChunkPosition();
+            float minX = pos.x * Chunk.CHUNK_SIZE;
+            float minY = pos.y * Chunk.CHUNK_HEIGHT;
+            float minZ = pos.z * Chunk.CHUNK_SIZE;
+            float maxX = minX + Chunk.CHUNK_SIZE;
+            float maxY = minY + Chunk.CHUNK_HEIGHT;
+            float maxZ = minZ + Chunk.CHUNK_SIZE;
+
+            if (frustum.isBoxVisible(minX, minY, minZ, maxX, maxY, maxZ)) {
+                chunk.render();
+            }
         }
     }
 
     public void loadChunkAsync(Vector3i position) {
         if (!chunks.containsKey(position)) {
-            Chunk chunk;
-
-            if (visitedChunks.contains(position)) {
-                byte[][][] savedBlocks = chunkDataCache.get(position);
-                chunk = new Chunk(position, this, savedBlocks);
-            } else {
-                byte[][][] generatedBlocks = terrainGenerator.generateChunkTerrain(position);
-                chunk = new Chunk(position, this, generatedBlocks);
-                visitedChunks.add(position);
-            }
-
+            byte[][][] generatedBlocks = terrainGenerator.generateChunkTerrain(position);
+            Chunk chunk = new Chunk(position, this, generatedBlocks);
             chunks.put(position, chunk);
-            chunksToBuild.add(position);  // Queue for mesh building on main thread
+            chunksToBuild.add(position);
         }
     }
 
@@ -211,23 +175,10 @@ public class ChunkManager {
         }
     }
 
-
-    public void unloadChunk(Vector3i position){
+    public void unloadChunk(Vector3i position) {
         Chunk chunk = chunks.remove(position);
-        if(chunk != null){
-            // Save chunk data
-            byte[][][] blocks = new byte[Chunk.CHUNK_SIZE][Chunk.CHUNK_HEIGHT][Chunk.CHUNK_SIZE];
-
-            for (int x = 0; x < Chunk.CHUNK_SIZE; x++) {
-                for (int y = 0; y < Chunk.CHUNK_HEIGHT; y++) {
-                    for (int z = 0; z < Chunk.CHUNK_SIZE; z++) {
-                        blocks[x][y][z] = chunk.getBlock(x, y, z);
-                    }
-                }
-            }
-
-            chunkDataCache.put(position, blocks);
-            chunksToCleanup.put(position, chunk);  // Store for cleanup on main thread
+        if (chunk != null) {
+            chunksToCleanup.put(position, chunk);
         }
     }
 
@@ -237,15 +188,13 @@ public class ChunkManager {
 
         for (Vector3i pos : chunksToCleanup.keySet()) {
             if (chunksCleanedUp >= maxCleanupsPerFrame) break;
-
             Chunk chunk = chunksToCleanup.remove(pos);
             if (chunk != null) {
-                chunk.cleanup();  // Now safe - on main thread
+                chunk.cleanup();
                 chunksCleanedUp++;
             }
         }
     }
-
 
     public boolean isChunkLoaded(Vector3i position) {
         return chunks.containsKey(position);

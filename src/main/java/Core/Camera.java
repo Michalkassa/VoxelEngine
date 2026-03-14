@@ -1,9 +1,7 @@
 package Core;
 
-import World.Chunk;
 import org.joml.Vector3f;
 import java.lang.Math;
-import static org.lwjgl.glfw.GLFW.*;
 import org.joml.*;
 
 public class Camera {
@@ -13,6 +11,7 @@ public class Camera {
 
     private float camera_yaw = 0.0f;
     private float camera_pitch = 0.0f;
+    private float FOV = 60.0f;
 
     public Vector3f direction;
     public Vector3f up;
@@ -54,17 +53,16 @@ public class Camera {
         up.set(right).cross(direction).normalize();
     }
 
-
-    public Vector3i getChunkPosition(){
-        return new Vector3i((int) position.x / Chunk.CHUNK_SIZE, 0 , (int) position.z / Chunk.CHUNK_SIZE);
-    }
-
     public Matrix4f getViewMatrix(Matrix4f dest) {
         return dest.setLookAt(
                 position,
                 new Vector3f(position).add(direction),
                 up
         );
+    }
+
+    public float getFOV() {
+        return FOV;
     }
 
     public void setPosition(Vector3f position) {

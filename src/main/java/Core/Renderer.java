@@ -1,5 +1,6 @@
 package Core;
 
+import UI.HudRenderer;
 import World.Chunk;
 import World.ChunkManager;
 import World.World;
@@ -23,6 +24,7 @@ public class Renderer {
     private Matrix4f view;
     private Matrix4f projection;
     private Camera camera;
+    private Frustum frustum;
     private World world;
 
     private int model_transform;
@@ -45,6 +47,7 @@ public class Renderer {
         model = new Matrix4f().identity();
         view = new Matrix4f().identity();
         projection = new Matrix4f().identity();
+        frustum = new Frustum();
 
         model_transform = glGetUniformLocation(shader.getShaderProgram(), "model_transform");
         view_transform = glGetUniformLocation(shader.getShaderProgram(), "view_transform");
@@ -56,7 +59,7 @@ public class Renderer {
 
         float aspect_ratio = (float) width[0] / height[0];
 
-        projection.perspective((float)Math.toRadians(80f), aspect_ratio, 0.1f, 512f);
+        projection.perspective((float)Math.toRadians(camera.getFOV()), aspect_ratio, 0.1f, 512f);
 
         glEnable(GL_DEPTH_TEST);
         glEnable(GL_CULL_FACE);
@@ -65,6 +68,7 @@ public class Renderer {
     }
 
     public void update(float dt){
+        glClearColor(0.24f, 0.54f, 0.9f, 1.0f); // sky blue
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         camera.update(dt);
         shader.bind();
@@ -83,11 +87,10 @@ public class Renderer {
 
         model.identity();
         glUniformMatrix4fv(model_transform, false, model.get(matBuffer));
-        world.render();
+        frustum.update(projection,view);
+        world.render(frustum);
 
     }
-
-
 
     public void cleanup(){
         texture.cleanup();
