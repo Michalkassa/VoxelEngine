@@ -10,25 +10,22 @@ import org.joml.Vector3i;
 import java.io.IOException;
 
 public class World {
-    private String name;
-    private long seed;
-    private ChunkManager chunkManager;
-    private Camera camera;
-    private SaveManager saveManager;
-    private ChunkLoader chunkLoader;
-    private Player player;
-    private final int INITIAL_RENDER_DISTANCE = 20;
-    private final int RENDER_DISTANCE = 40;
+    private final String name;
+    private final long seed;
+    private final ChunkManager chunkManager;
+    private final SaveManager saveManager;
+    private final ChunkLoader chunkLoader;
+    private final Player player;
+    private final int INITIAL_RENDER_DISTANCE = 32;
+    private final int RENDER_DISTANCE = 32;
 
-    public World(String name, Camera camera, Player player, long seed) {
+    public World(String name, Player player, long seed) {
         this.name = name;
         this.seed = seed;
-        this.camera = camera;
         this.player = player;
         this.chunkManager = new ChunkManager(seed);
         this.saveManager = new SaveManager(name);
 
-        // Create world directory if needed
         if (!FileCreator.worldExists(name)) {
             try {
                 FileCreator.createWorldDirectory(name);
@@ -39,11 +36,9 @@ public class World {
             }
         }
 
-        // Load initial chunks around spawn
         Vector3i spawnChunk = new Vector3i(0, 0, 0);
         chunkManager.loadChunksInRadius(spawnChunk, INITIAL_RENDER_DISTANCE);
 
-        // Start chunk loader thread
         chunkLoader = new ChunkLoader(chunkManager, player, RENDER_DISTANCE);
         chunkLoader.start();
     }
@@ -57,7 +52,6 @@ public class World {
     }
 
     public void update(){
-        // ChunkLoader thread handles chunk loading/unloading automatically
         chunkManager.buildQueuedMeshes();
     }
 

@@ -14,7 +14,7 @@ public class ChunkManager {
     private Map<Vector3i, Chunk> chunks;
     private TerrainGenerator terrainGenerator;
     private Queue<Vector3i> chunksToBuild = new ConcurrentLinkedQueue<>();
-    private Map<Vector3i, Chunk> chunksToCleanup = new ConcurrentHashMap<>();
+    private Queue<Chunk> cleanupQueue = new ConcurrentLinkedQueue<>();
     private long seed;
 
     public ChunkManager(long seed) {
@@ -100,23 +100,6 @@ public class ChunkManager {
         }
     }
 
-    public void unloadChunksOutOfRadius(Vector3i centre, int radius) {
-        List<Vector3i> chunksToUnload = new ArrayList<>();
-
-        for (Vector3i chunkPos : chunks.keySet()) {
-            int deltaX = Math.abs(chunkPos.x - centre.x);
-            int deltaZ = Math.abs(chunkPos.z - centre.z);
-
-            if (deltaX > radius || deltaZ > radius) {
-                chunksToUnload.add(chunkPos);
-            }
-        }
-
-        for (Vector3i chunkPos : chunksToUnload) {
-            unloadChunk(chunkPos);
-        }
-    }
-
     private void rebuildAdjacentChunks(Vector3i position) {
         Vector3i[] neighbors = {
                 new Vector3i(position.x + 1, 0, position.z),
@@ -159,6 +142,11 @@ public class ChunkManager {
     }
 
     public void buildQueuedMeshes() {
+        Chunk toClean;
+        while((toClean = cleanupQueue.poll()) != null) {
+            toClean.cleanup();
+        }
+
         int meshesBuilt = 0;
         int maxMeshesPerFrame = 2;
 
@@ -178,23 +166,10 @@ public class ChunkManager {
     public void unloadChunk(Vector3i position) {
         Chunk chunk = chunks.remove(position);
         if (chunk != null) {
-            chunksToCleanup.put(position, chunk);
+            cleanupQueue.add(chunk);
         }
     }
 
-    public void cleanupQueuedChunks() {
-        int chunksCleanedUp = 0;
-        int maxCleanupsPerFrame = 4;
-
-        for (Vector3i pos : chunksToCleanup.keySet()) {
-            if (chunksCleanedUp >= maxCleanupsPerFrame) break;
-            Chunk chunk = chunksToCleanup.remove(pos);
-            if (chunk != null) {
-                chunk.cleanup();
-                chunksCleanedUp++;
-            }
-        }
-    }
 
     public boolean isChunkLoaded(Vector3i position) {
         return chunks.containsKey(position);

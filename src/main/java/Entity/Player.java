@@ -3,22 +3,22 @@ package Entity;
 import Core.Camera;
 import Core.Input;
 import Core.Transform;
+import World.Block;
 import World.Chunk;
 import World.ChunkManager;
 import org.joml.Vector3f;
+import org.joml.Vector3i;
 import org.lwjgl.glfw.GLFW;
 
 public class Player extends Entity {
 
-    private static final float MOVE_SPEED = 9.0f;
+    private static final float MOVE_SPEED = 30.0f;
     private static final float JUMP_FORCE = 28f;
     private static final float MOUSE_SENSITIVITY = 0.1f;
     private static final float ACCELERATION = 50f;
     private static final float GROUND_FRICTION = 30f;
     private static final float AIR_FRICTION = 5f;
     private static final float AIR_CONTROL = 8f;
-
-
 
     private Camera camera;
 
@@ -43,7 +43,7 @@ public class Player extends Entity {
 
     @Override
     public void update(float dt, ChunkManager chunkManager) {
-        handleInput(dt);
+        handleInput(dt , chunkManager);
         super.update(dt, chunkManager);
         updateCameraPosition();
     }
@@ -53,7 +53,7 @@ public class Player extends Entity {
        return;
     }
 
-    public void handleInput(float deltaTime) {
+    public void handleInput(float deltaTime, ChunkManager chunkManager) {
         // Mouse look
         float deltaX = Input.getMouseDeltaX() * MOUSE_SENSITIVITY;
         float deltaY = Input.getMouseDeltaY() * MOUSE_SENSITIVITY;
@@ -81,6 +81,14 @@ public class Player extends Entity {
         if (Input.isKeyDown(GLFW.GLFW_KEY_D)) {
             moveDirection.add(right);
         }
+        if (Input.isKeyDown(GLFW.GLFW_KEY_ENTER)) {
+            Vector3i blockpos = camera.shootRaycast();
+            if (blockpos != null) {
+                chunkManager.setBlockAt(blockpos,(byte) Block.AIR.ordinal());
+            }
+        }
+
+
 
         if (moveDirection.lengthSquared() > 0) {
             moveDirection.normalize();

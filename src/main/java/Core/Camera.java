@@ -1,5 +1,6 @@
 package Core;
 
+import World.World;
 import org.joml.Vector3f;
 import java.lang.Math;
 import org.joml.*;
@@ -12,10 +13,14 @@ public class Camera {
     private float camera_yaw = 0.0f;
     private float camera_pitch = 0.0f;
     private float FOV = 60.0f;
+    private Raycast raycast;
+    private final float INTERACTION_DISTANCE = 4f;
 
+    //TODO fix to private
     public Vector3f direction;
     public Vector3f up;
     public Vector3f right;
+
     private final static Vector3f world_up = new Vector3f(0,1,0);
 
 
@@ -25,6 +30,12 @@ public class Camera {
         this.direction = new Vector3f();
         this.up = new Vector3f();
         this.right = new Vector3f();
+    }
+
+    public Vector3i shootRaycast(){
+        raycast.setDirection(direction);
+        raycast.setOrigin(position);
+        return raycast.getBlockPosition();
     }
 
     private void setDirection(float dt){
@@ -77,4 +88,7 @@ public class Camera {
        camera_pitch = pitch;
     }
 
+    public void setRaycast(Raycast raycast) {
+        this.raycast = raycast;
+    }
 }

@@ -5,6 +5,8 @@ import org.joml.Vector3i;
 
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class ChunkLoader extends Thread {
 
@@ -14,6 +16,10 @@ public class ChunkLoader extends Thread {
 
     private Queue<Vector3i> chunksToLoad;
     private Queue<Vector3i> chunksToUnload;
+
+    private final Lock chunksToLoadLock = new ReentrantLock();
+
+    private final int LOADING_DELAY = 100;
 
     private volatile boolean running;
 
@@ -32,13 +38,15 @@ public class ChunkLoader extends Thread {
         while (running) {
             try {
                 Vector3i playerChunkPos = getPlayerChunkPosition();
-
                 updateChunkQueues(playerChunkPos);
-
                 processChunkLoading();
                 processChunkUnloading();
 
-                Thread.sleep(100);
+                if (chunksToLoad.isEmpty()) {
+                    Thread.sleep(LOADING_DELAY);
+                }else{
+                    Thread.sleep(LOADING_DELAY/2);
+                }
 
             } catch (InterruptedException e) {
                 System.out.println("ChunkLoader interrupted");
@@ -47,6 +55,12 @@ public class ChunkLoader extends Thread {
                 System.err.println("ChunkLoader error: " + e.getMessage());
                 e.printStackTrace();
             }
+        }
+    }
+
+    public void notifyLoadChunks() {
+        synchronized (chunksToLoadLock) {
+            chunksToLoadLock.notify();
         }
     }
 
@@ -76,7 +90,6 @@ public class ChunkLoader extends Thread {
             }
         }
 
-        // Unload chunks
         for (Vector3i loadedChunk : chunkManager.getLoadedChunks()) {
             int deltaX = Math.abs(loadedChunk.x - playerChunkPos.x);
             int deltaZ = Math.abs(loadedChunk.z - playerChunkPos.z);
