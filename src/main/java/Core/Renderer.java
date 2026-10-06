@@ -42,7 +42,7 @@ public class Renderer {
     public void init() {
 
         shader = new Shader("/shaders/vertexShader.glsl","/shaders/fragmentShader.glsl");
-        texture = new Texture("/Users/michalkassa/Desktop/VoxelEngine/src/main/resources/images/texture.png");
+        texture = new Texture("src/main/resources/images/texture.png");
 
         model = new Matrix4f().identity();
         view = new Matrix4f().identity();
