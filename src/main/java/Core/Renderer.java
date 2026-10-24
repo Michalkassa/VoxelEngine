@@ -1,33 +1,36 @@
 package Core;
 
-import UI.HudRenderer;
-import World.Chunk;
-import World.ChunkManager;
-import World.World;
 import org.joml.Math;
+import org.joml.Matrix4f;
 import org.lwjgl.glfw.GLFW;
-import org.lwjgl.stb.STBImage;
-import org.lwjgl.system.MemoryStack;
-import java.nio.ByteBuffer;
-import java.nio.IntBuffer;
+import static org.lwjgl.opengl.GL11.GL_BACK;
+import static org.lwjgl.opengl.GL11.GL_CCW;
+import static org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT;
+import static org.lwjgl.opengl.GL11.GL_CULL_FACE;
+import static org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT;
+import static org.lwjgl.opengl.GL11.GL_DEPTH_TEST;
+import static org.lwjgl.opengl.GL11.glClear;
+import static org.lwjgl.opengl.GL11.glClearColor;
+import static org.lwjgl.opengl.GL11.glCullFace;
+import static org.lwjgl.opengl.GL11.glEnable;
+import static org.lwjgl.opengl.GL11.glFrontFace;
+import static org.lwjgl.opengl.GL20.glGetUniformLocation;
+import static org.lwjgl.opengl.GL20.glUniformMatrix4fv;
 
-import static org.lwjgl.glfw.GLFW.glfwGetTime;
-import static org.lwjgl.opengl.GL46.*;
-import static org.lwjgl.stb.STBImage.*;
-import org.joml.*;
+import World.World;
 
 public class Renderer {
 
     private Shader shader;
     private Texture texture;
-    private Matrix4f model;
     private Matrix4f view;
     private Matrix4f projection;
     private Camera camera;
     private Frustum frustum;
     private World world;
 
-    private int model_transform;
+    private final float PROJECTION_MAX_DISTANCE = 2048f;
+    private int chunk_offset;
     private int view_transform ;
     private int  projection_transform;
 
@@ -44,12 +47,11 @@ public class Renderer {
         shader = new Shader("/shaders/vertexShader.glsl","/shaders/fragmentShader.glsl");
         texture = new Texture("src/main/resources/images/texture.png");
 
-        model = new Matrix4f().identity();
         view = new Matrix4f().identity();
         projection = new Matrix4f().identity();
         frustum = new Frustum();
 
-        model_transform = glGetUniformLocation(shader.getShaderProgram(), "model_transform");
+        chunk_offset = glGetUniformLocation(shader.getShaderProgram(), "chunk_offset");
         view_transform = glGetUniformLocation(shader.getShaderProgram(), "view_transform");
         projection_transform = glGetUniformLocation(shader.getShaderProgram(), "projection_transform");
 
@@ -59,7 +61,7 @@ public class Renderer {
 
         float aspect_ratio = (float) width[0] / height[0];
 
-        projection.perspective((float)Math.toRadians(camera.getFOV()), aspect_ratio, 0.1f, 512f);
+        projection.perspective((float)Math.toRadians(camera.getFOV()), aspect_ratio, 0.1f, PROJECTION_MAX_DISTANCE);
 
         glEnable(GL_DEPTH_TEST);
         glEnable(GL_CULL_FACE);
@@ -75,9 +77,6 @@ public class Renderer {
 
         camera.getViewMatrix(view);
 
-        //model.rotate(Math.toRadians(-55f) * deltaTime , new Vector3f(0f,1f,0f)).normalize3x3();
-
-        glUniformMatrix4fv(model_transform, false, model.get(matBuffer));
         glUniformMatrix4fv(view_transform, false, view.get(matBuffer));
         glUniformMatrix4fv(projection_transform, false, projection.get(matBuffer));
 
@@ -85,10 +84,8 @@ public class Renderer {
         texture.bind();
 
 
-        model.identity();
-        glUniformMatrix4fv(model_transform, false, model.get(matBuffer));
         frustum.update(projection,view);
-        world.render(frustum);
+        world.render(frustum, camera.position, chunk_offset);
 
     }
 
