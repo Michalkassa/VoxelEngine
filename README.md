@@ -74,21 +74,6 @@ The first launch downloads the dependencies. After that, the spawn area is gener
 | `Enter` | Break the block under the crosshair |
 | `⌘ Q` | Quit |
 
-## Project structure
-
-```
-src/main/java
-├── Main.java            Entry point
-├── Core/                Game loop, window, input, camera, renderer, shaders, textures, raycast, frustum
-├── World/               World, chunks, chunk manager, background chunk loader, Perlin noise, terrain gen
-├── Entity/              Entities, player controller, AABB collision
-├── UI/                  NanoVG HUD (crosshair, FPS, position, velocity, chunk)
-└── Storage/             World save system (WIP)
-src/main/resources
-├── shaders/             GLSL vertex and fragment shaders
-└── images/texture.png   Block texture atlas
-```
-
 ## How it works
 
 1. **Generation:** `TerrainGenerator` samples `PerlinNoise.getOctaveNoise` for each column and shapes the value with a cubic curve, which gives flat lowlands and sharp peaks.
