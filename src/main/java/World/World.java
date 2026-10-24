@@ -5,6 +5,7 @@ import Core.Frustum;
 import Entity.Player;
 import Storage.FileCreator;
 import Storage.SaveManager;
+import org.joml.Vector3f;
 import org.joml.Vector3i;
 
 import java.io.IOException;
@@ -43,8 +44,8 @@ public class World {
         chunkLoader.start();
     }
 
-    public void render(Frustum frustum) {
-        chunkManager.renderChunks(frustum);
+    public void render(Frustum frustum, Vector3f cameraPosition, int chunkOffsetUniform) {
+        chunkManager.renderChunks(frustum, cameraPosition, chunkOffsetUniform);
     }
 
     public ChunkManager getChunkManager(){

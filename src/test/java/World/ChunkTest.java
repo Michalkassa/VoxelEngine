@@ -40,10 +40,58 @@ class ChunkTest {
     }
 
     @Test
-    void getBlockReflectsChangesToBackingArray() {
+    void constructorCopiesInputBlocks() {
         blocks[1][2][3] = (byte) Block.SAND.ordinal();
+        blocks[0][0][0] = (byte) Block.AIR.ordinal();
 
-        assertEquals(Block.SAND.ordinal(), chunk.getBlock(1, 2, 3));
+        assertEquals(Block.AIR.ordinal(), chunk.getBlock(1, 2, 3));
+        assertEquals(Block.STONE.ordinal(), chunk.getBlock(0, 0, 0));
+    }
+
+    @Test
+    void constructorAcceptsSmallerInputArrays() {
+        Chunk small = new Chunk(new Vector3i(), null, new byte[][][]{{{(byte) Block.DIRT.ordinal()}}});
+
+        assertEquals(Block.DIRT.ordinal(), small.getBlock(0, 0, 0));
+        assertEquals(Block.AIR.ordinal(), small.getBlock(1, 0, 0));
+    }
+
+    @Test
+    void onlySectionsContainingBlocksAreAllocated() {
+        assertTrue(chunk.isSectionAllocated(0));
+        assertTrue(chunk.isSectionAllocated(4));
+        assertTrue(chunk.isSectionAllocated(15));
+        for (int section : new int[]{1, 2, 3, 5, 10, 14}) {
+            assertFalse(chunk.isSectionAllocated(section), "section " + section);
+        }
+    }
+
+    @Test
+    void setBlockWritesBlock() {
+        chunk.setBlock(new Vector3i(4, 100, 9), (byte) Block.WOOD.ordinal());
+
+        assertEquals(Block.WOOD.ordinal(), chunk.getBlock(4, 100, 9));
+        assertTrue(chunk.isSectionAllocated(100 / Chunk.SECTION_HEIGHT));
+    }
+
+    @Test
+    void setBlockToAirRemovesBlock() {
+        chunk.setBlock(new Vector3i(7, 64, 3), (byte) Block.AIR.ordinal());
+
+        assertEquals(Block.AIR.ordinal(), chunk.getBlock(7, 64, 3));
+    }
+
+    @Test
+    void settingAirInEmptySectionDoesNotAllocateIt() {
+        chunk.setBlock(new Vector3i(1, 40, 1), (byte) Block.AIR.ordinal());
+
+        assertFalse(chunk.isSectionAllocated(40 / Chunk.SECTION_HEIGHT));
+    }
+
+    @Test
+    void chunkHasNoMeshUntilBuilt() {
+        assertFalse(chunk.hasMesh());
+        assertFalse(chunk.hasVisibleMesh());
     }
 
     @Test
