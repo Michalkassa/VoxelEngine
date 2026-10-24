@@ -6,6 +6,8 @@ public class Input {
 
     private static final boolean[] keys = new boolean[GLFW.GLFW_KEY_LAST];
     private static final boolean[] keysPressed = new boolean[GLFW.GLFW_KEY_LAST];
+    private static final boolean[] mouseButtons = new boolean[GLFW.GLFW_MOUSE_BUTTON_LAST + 1];
+    private static final boolean[] mouseButtonsPressed = new boolean[GLFW.GLFW_MOUSE_BUTTON_LAST + 1];
 
     private static float mouseX, mouseY;
     private static float deltaX, deltaY;
@@ -22,6 +24,17 @@ public class Input {
 
             if (action == GLFW.GLFW_PRESS && !wasDown) {
                 keysPressed[key] = true;
+            }
+        });
+
+        GLFW.glfwSetMouseButtonCallback(window, (w, button, action, mods) -> {
+            if (button < 0 || button > GLFW.GLFW_MOUSE_BUTTON_LAST) return;
+
+            boolean wasDown = mouseButtons[button];
+            mouseButtons[button] = action != GLFW.GLFW_RELEASE;
+
+            if (action == GLFW.GLFW_PRESS && !wasDown) {
+                mouseButtonsPressed[button] = true;
             }
         });
 
@@ -52,6 +65,16 @@ public class Input {
     public static boolean isKeyPressed(int key) {
         boolean pressed = keysPressed[key];
         keysPressed[key] = false;
+        return pressed;
+    }
+
+    public static boolean isMouseButtonDown(int button) {
+        return mouseButtons[button];
+    }
+
+    public static boolean isMouseButtonPressed(int button) {
+        boolean pressed = mouseButtonsPressed[button];
+        mouseButtonsPressed[button] = false;
         return pressed;
     }
 
