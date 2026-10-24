@@ -18,6 +18,8 @@ public class HudRenderer {
     private TextPosition textPosition;
     public TextVelocity textVelocity;
     public TextChunkPosition textChunkPosition;
+    private TextGameMode textGameMode;
+    private TextHealth textHealth;
 
     public HudRenderer(Player player) {
         this.player = player;
@@ -31,6 +33,8 @@ public class HudRenderer {
         textPosition = new TextPosition(20, player);
         textVelocity = new TextVelocity(20, player);
         textChunkPosition = new TextChunkPosition(20, player);
+        textGameMode = new TextGameMode(20, player);
+        textHealth = new TextHealth(20, player);
     }
 
     public void render(int width, int height, float dt) {
@@ -45,6 +49,8 @@ public class HudRenderer {
         textPosition.render(vg);
         textVelocity.render(vg);
         textChunkPosition.render(vg);
+        textGameMode.render(vg);
+        textHealth.render(vg);
         //stop rendering ui here
         nvgEndFrame(vg);
         glEnable(GL_DEPTH_TEST);
