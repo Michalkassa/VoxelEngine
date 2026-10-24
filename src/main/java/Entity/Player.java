@@ -17,6 +17,7 @@ public class Player extends Entity {
     private static final float FLY_SPEED = 20f;
     private static final float FLY_VERTICAL_SPEED = 8f;
     private static final float DOUBLE_TAP_WINDOW = 0.3f;
+    private static final float BREAK_INTERVAL = 0.25f;
     private static final float MOUSE_SENSITIVITY = 0.1f;
     private static final float ACCELERATION = 50f;
     private static final float GROUND_FRICTION = 30f;
@@ -30,6 +31,7 @@ public class Player extends Entity {
     private float health = MAX_HEALTH;
     private boolean flying = false;
     private float timeSinceJumpPress = Float.MAX_VALUE;
+    private float breakCooldown = 0f;
 
     private float yaw = 0.0f;   // Rotation around Y axis
     private float pitch = 0.0f; // Rotation around X axis
@@ -94,11 +96,11 @@ public class Player extends Entity {
         if (Input.isKeyDown(GLFW.GLFW_KEY_D)) {
             moveDirection.add(right);
         }
-        if (Input.isKeyDown(GLFW.GLFW_KEY_ENTER)) {
-            Vector3i blockpos = camera.shootRaycast();
-            if (blockpos != null) {
-                chunkManager.setBlockAt(blockpos,(byte) Block.AIR.ordinal());
-            }
+        breakCooldown -= deltaTime;
+        if (Input.isMouseButtonPressed(GLFW.GLFW_MOUSE_BUTTON_LEFT)) {
+            breakTargetBlock(chunkManager);
+        } else if (Input.isMouseButtonDown(GLFW.GLFW_MOUSE_BUTTON_LEFT) && breakCooldown <= 0f) {
+            breakTargetBlock(chunkManager);
         }
 
 
@@ -149,6 +151,14 @@ public class Player extends Entity {
 
             if (Math.abs(velocity.x) < 0.01f) velocity.x = 0;
             if (Math.abs(velocity.z) < 0.01f) velocity.z = 0;
+        }
+    }
+
+    private void breakTargetBlock(ChunkManager chunkManager) {
+        breakCooldown = BREAK_INTERVAL;
+        Vector3i blockpos = camera.shootRaycast();
+        if (blockpos != null) {
+            chunkManager.setBlockAt(blockpos, (byte) Block.AIR.ordinal());
         }
     }
 
