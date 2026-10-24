@@ -1,13 +1,14 @@
 #version 330 core
-layout (location = 0) in vec3 aPos;
-layout (location = 1) in vec2 aTexCoord;
+layout (location = 0) in uint aPacked;
 out vec2 TexCoord;
-uniform mat4 model_transform;
+uniform vec3 chunk_offset;
 uniform mat4 view_transform;
 uniform mat4 projection_transform;
 
 void main()
 {
-    gl_Position = projection_transform * view_transform * model_transform * vec4(aPos, 1.0);
-    TexCoord = aTexCoord;
+    vec3 local = vec3(float(aPacked & 31u), float((aPacked >> 5u) & 511u), float((aPacked >> 14u) & 31u));
+    vec3 worldPos = chunk_offset + local - 0.5;
+    gl_Position = projection_transform * view_transform * vec4(worldPos, 1.0);
+    TexCoord = vec2(float((aPacked >> 19u) & 31u), float((aPacked >> 24u) & 31u)) / 16.0;
 }

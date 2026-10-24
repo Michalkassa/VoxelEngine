@@ -9,12 +9,16 @@ import java.lang.Math;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+import static org.lwjgl.opengl.GL46.glUniform3f;
+
 public class ChunkManager {
 
     private Map<Vector3i, Chunk> chunks;
     private TerrainGenerator terrainGenerator;
     private Queue<Vector3i> chunksToBuild = new ConcurrentLinkedQueue<>();
     private Queue<Chunk> cleanupQueue = new ConcurrentLinkedQueue<>();
+    private final Set<Vector3i> pendingMeshes = new LinkedHashSet<>();
+    private final ArrayList<Chunk> visibleChunks = new ArrayList<>();
     private long seed;
 
     public ChunkManager(long seed) {
@@ -27,9 +31,39 @@ public class ChunkManager {
             byte[][][] generatedBlocks = terrainGenerator.generateChunkTerrain(position);
             Chunk chunk = new Chunk(position, this, generatedBlocks);
             chunks.put(position, chunk);
-            chunk.buildMesh();
-            rebuildAdjacentChunks(position);
+            queueMeshCandidates(position);
+            buildPendingMeshes(Integer.MAX_VALUE);
         }
+    }
+
+    private void queueMeshCandidates(Vector3i position) {
+        pendingMeshes.add(position);
+        pendingMeshes.add(new Vector3i(position.x + 1, 0, position.z));
+        pendingMeshes.add(new Vector3i(position.x - 1, 0, position.z));
+        pendingMeshes.add(new Vector3i(position.x, 0, position.z + 1));
+        pendingMeshes.add(new Vector3i(position.x, 0, position.z - 1));
+    }
+
+    public boolean hasAllNeighbours(Vector3i position) {
+        return chunks.containsKey(new Vector3i(position.x + 1, 0, position.z))
+                && chunks.containsKey(new Vector3i(position.x - 1, 0, position.z))
+                && chunks.containsKey(new Vector3i(position.x, 0, position.z + 1))
+                && chunks.containsKey(new Vector3i(position.x, 0, position.z - 1));
+    }
+
+    // A chunk is meshed once, when all 4 neighbours exist, so loading never forces a rebuild
+    private int buildPendingMeshes(int limit) {
+        int built = 0;
+        Iterator<Vector3i> iterator = pendingMeshes.iterator();
+        while (iterator.hasNext() && built < limit) {
+            Vector3i position = iterator.next();
+            iterator.remove();
+            Chunk chunk = chunks.get(position);
+            if (chunk == null || chunk.hasMesh() || !hasAllNeighbours(position)) continue;
+            chunk.buildMesh();
+            built++;
+        }
+        return built;
     }
 
     public Chunk getChunk(Vector3f world_position) {
@@ -86,7 +120,21 @@ public class ChunkManager {
             throw new RuntimeException("Trying to set block that doesnt Exist");
         }
         chunk.setBlock(localCoordinates, block_type);
-        rebuildAdjacentChunks(chunkCoordinates);
+        if (chunk.hasMesh()) {
+            chunk.buildMesh();
+        }
+
+        if (localCoordinates.x == 0) rebuildMeshedChunk(chunkCoordinates.x - 1, chunkCoordinates.z);
+        if (localCoordinates.x == Chunk.CHUNK_SIZE - 1) rebuildMeshedChunk(chunkCoordinates.x + 1, chunkCoordinates.z);
+        if (localCoordinates.z == 0) rebuildMeshedChunk(chunkCoordinates.x, chunkCoordinates.z - 1);
+        if (localCoordinates.z == Chunk.CHUNK_SIZE - 1) rebuildMeshedChunk(chunkCoordinates.x, chunkCoordinates.z + 1);
+    }
+
+    private void rebuildMeshedChunk(int chunkX, int chunkZ) {
+        Chunk chunk = getChunk(new Vector3i(chunkX, 0, chunkZ));
+        if (chunk != null && chunk.hasMesh()) {
+            chunk.buildMesh();
+        }
     }
 
     public void loadChunksInRadius(Vector3i centre, int radius) {
@@ -100,36 +148,38 @@ public class ChunkManager {
         }
     }
 
-    private void rebuildAdjacentChunks(Vector3i position) {
-        Vector3i[] neighbors = {
-                new Vector3i(position.x + 1, 0, position.z),
-                new Vector3i(position.x - 1, 0, position.z),
-                new Vector3i(position.x, 0, position.z + 1),
-                new Vector3i(position.x, 0, position.z - 1)
-        };
-
-        for (Vector3i neighbor : neighbors) {
-            Chunk chunk = getChunk(neighbor);
-            if (chunk != null) {
-                chunk.buildMesh();
-            }
-        }
-    }
-
-    public void renderChunks(Frustum frustum) {
+    public void renderChunks(Frustum frustum, Vector3f cameraPosition, int chunkOffsetUniform) {
+        visibleChunks.clear();
         for (Chunk chunk : chunks.values()) {
+            if (!chunk.hasVisibleMesh()) continue;
             Vector3i pos = chunk.getChunkPosition();
-            float minX = pos.x * Chunk.CHUNK_SIZE;
-            float minY = pos.y * Chunk.CHUNK_HEIGHT;
-            float minZ = pos.z * Chunk.CHUNK_SIZE;
+            float minX = pos.x * Chunk.CHUNK_SIZE - 0.5f;
+            float minY = chunk.getMeshMinY() - 0.5f;
+            float minZ = pos.z * Chunk.CHUNK_SIZE - 0.5f;
             float maxX = minX + Chunk.CHUNK_SIZE;
-            float maxY = minY + Chunk.CHUNK_HEIGHT;
+            float maxY = chunk.getMeshMaxY() - 0.5f;
             float maxZ = minZ + Chunk.CHUNK_SIZE;
 
             if (frustum.isBoxVisible(minX, minY, minZ, maxX, maxY, maxZ)) {
-                chunk.render();
+                visibleChunks.add(chunk);
             }
         }
+
+        // Nearest first so the depth test rejects hidden fragments early
+        visibleChunks.sort(Comparator.comparingDouble(chunk -> distanceSquared(chunk, cameraPosition)));
+
+        for (Chunk chunk : visibleChunks) {
+            Vector3i pos = chunk.getChunkPosition();
+            glUniform3f(chunkOffsetUniform, pos.x * Chunk.CHUNK_SIZE, 0, pos.z * Chunk.CHUNK_SIZE);
+            chunk.render();
+        }
+    }
+
+    private static float distanceSquared(Chunk chunk, Vector3f point) {
+        Vector3i pos = chunk.getChunkPosition();
+        float dx = pos.x * Chunk.CHUNK_SIZE + Chunk.CHUNK_SIZE / 2f - point.x;
+        float dz = pos.z * Chunk.CHUNK_SIZE + Chunk.CHUNK_SIZE / 2f - point.z;
+        return dx * dx + dz * dz;
     }
 
     public void loadChunkAsync(Vector3i position) {
@@ -147,20 +197,13 @@ public class ChunkManager {
             toClean.cleanup();
         }
 
-        int meshesBuilt = 0;
         int maxMeshesPerFrame = 2;
 
-        while (!chunksToBuild.isEmpty() && meshesBuilt < maxMeshesPerFrame) {
-            Vector3i chunkPos = chunksToBuild.poll();
-            if (chunkPos != null) {
-                Chunk chunk = chunks.get(chunkPos);
-                if (chunk != null) {
-                    chunk.buildMesh();
-                    rebuildAdjacentChunks(chunkPos);
-                    meshesBuilt++;
-                }
-            }
+        Vector3i loaded;
+        while ((loaded = chunksToBuild.poll()) != null) {
+            queueMeshCandidates(loaded);
         }
+        buildPendingMeshes(maxMeshesPerFrame);
     }
 
     public void unloadChunk(Vector3i position) {

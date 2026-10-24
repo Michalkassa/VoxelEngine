@@ -171,4 +171,45 @@ class ChunkManagerTest {
 
         assertTrue(chunkManager.getLoadedChunks().isEmpty());
     }
+
+    @Test
+    void hasAllNeighboursRequiresFourSides() {
+        Vector3i center = new Vector3i(0, 0, 0);
+        chunkManager.loadChunkAsync(new Vector3i(1, 0, 0));
+        chunkManager.loadChunkAsync(new Vector3i(-1, 0, 0));
+        chunkManager.loadChunkAsync(new Vector3i(0, 0, 1));
+        assertFalse(chunkManager.hasAllNeighbours(center));
+
+        chunkManager.loadChunkAsync(new Vector3i(0, 0, -1));
+        assertTrue(chunkManager.hasAllNeighbours(center));
+    }
+
+    @Test
+    void asyncLoadedChunksAreNotMeshedImmediately() {
+        chunkManager.loadChunkAsync(new Vector3i(0, 0, 0));
+
+        assertFalse(chunkManager.getChunk(new Vector3i(0, 0, 0)).hasMesh());
+    }
+
+    @Test
+    void setBlockAtChangesBlockInUnmeshedChunk() {
+        chunkManager.loadChunkAsync(new Vector3i(0, 0, 0));
+        chunkManager.loadChunkAsync(new Vector3i(-1, 0, 0));
+
+        chunkManager.setBlockAt(new Vector3i(0, 200, 0), (byte) Block.WOOD.ordinal());
+        chunkManager.setBlockAt(new Vector3i(-1, 200, 3), (byte) Block.LEAF.ordinal());
+
+        assertEquals(Block.WOOD.ordinal(), chunkManager.getBlockAt(new Vector3i(0, 200, 0)));
+        assertEquals(Block.LEAF.ordinal(), chunkManager.getBlockAt(new Vector3i(-1, 200, 3)));
+    }
+
+    @Test
+    void setBlockAtCanRemoveTerrain() {
+        chunkManager.loadChunkAsync(new Vector3i(0, 0, 0));
+        int height = generator.getHeight(4, 4);
+
+        chunkManager.setBlockAt(new Vector3i(4, height - 1, 4), (byte) Block.AIR.ordinal());
+
+        assertFalse(chunkManager.isBlockAt(new Vector3i(4, height - 1, 4)));
+    }
 }
