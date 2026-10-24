@@ -1,26 +1,35 @@
 package Entity;
 
-import Core.Camera;
-import Core.Input;
-import Core.Transform;
-import World.Block;
-import World.Chunk;
-import World.ChunkManager;
 import org.joml.Vector3f;
 import org.joml.Vector3i;
 import org.lwjgl.glfw.GLFW;
 
+import Core.Camera;
+import Core.Input;
+import Core.Transform;
+import World.Block;
+import World.ChunkManager;
+
 public class Player extends Entity {
 
-    private static final float MOVE_SPEED = 30.0f;
-    private static final float JUMP_FORCE = 28f;
+    private static final float MOVE_SPEED = 6f;
+    private static final float JUMP_FORCE = 9f;
+    private static final float FLY_SPEED = 20f;
+    private static final float FLY_VERTICAL_SPEED = 8f;
+    private static final float DOUBLE_TAP_WINDOW = 0.3f;
     private static final float MOUSE_SENSITIVITY = 0.1f;
     private static final float ACCELERATION = 50f;
     private static final float GROUND_FRICTION = 30f;
     private static final float AIR_FRICTION = 5f;
     private static final float AIR_CONTROL = 8f;
+    public static final float MAX_HEALTH = 20f;
 
     private Camera camera;
+
+    private GameMode gameMode = GameMode.SURVIVAL;
+    private float health = MAX_HEALTH;
+    private boolean flying = false;
+    private float timeSinceJumpPress = Float.MAX_VALUE;
 
     private float yaw = 0.0f;   // Rotation around Y axis
     private float pitch = 0.0f; // Rotation around X axis
@@ -67,6 +76,10 @@ public class Player extends Entity {
 
         updateDirectionVectors();
 
+        if (Input.isKeyPressed(GLFW.GLFW_KEY_G)) {
+            toggleGameMode();
+        }
+
         Vector3f moveDirection = new Vector3f();
 
         if (Input.isKeyDown(GLFW.GLFW_KEY_W)) {
@@ -90,33 +103,52 @@ public class Player extends Entity {
 
 
 
+        if (flying && onGround) {
+            flying = false;
+        }
+
+        timeSinceJumpPress += deltaTime;
+        if (Input.isKeyPressed(GLFW.GLFW_KEY_SPACE)) {
+            if (gameMode == GameMode.CREATIVE && timeSinceJumpPress < DOUBLE_TAP_WINDOW) {
+                flying = !flying;
+                velocity.y = 0;
+                timeSinceJumpPress = Float.MAX_VALUE;
+            } else {
+                timeSinceJumpPress = 0;
+                if (!flying) jump();
+            }
+        }
+
+        if (flying) {
+            velocity.y = 0;
+            if (Input.isKeyDown(GLFW.GLFW_KEY_SPACE)) velocity.y += FLY_VERTICAL_SPEED;
+            if (Input.isKeyDown(GLFW.GLFW_KEY_LEFT_SHIFT)) velocity.y -= FLY_VERTICAL_SPEED;
+        }
+
+        float maxSpeed = flying ? FLY_SPEED : MOVE_SPEED;
+
         if (moveDirection.lengthSquared() > 0) {
             moveDirection.normalize();
 
-            float accel = onGround ? ACCELERATION : AIR_CONTROL;
+            float accel = onGround || flying ? ACCELERATION : AIR_CONTROL;
 
             velocity.x += moveDirection.x * accel * deltaTime;
             velocity.z += moveDirection.z * accel * deltaTime;
 
             float horizontalSpeed = (float) Math.sqrt(velocity.x * velocity.x + velocity.z * velocity.z);
-            if (horizontalSpeed > MOVE_SPEED) {
-                float scale = MOVE_SPEED / horizontalSpeed;
+            if (horizontalSpeed > maxSpeed) {
+                float scale = maxSpeed / horizontalSpeed;
                 velocity.x *= scale;
                 velocity.z *= scale;
             }
         }
         else {
-            float friction = onGround ? GROUND_FRICTION : AIR_FRICTION;
+            float friction = onGround || flying ? GROUND_FRICTION : AIR_FRICTION;
             velocity.x -= velocity.x * friction * deltaTime;
             velocity.z -= velocity.z * friction * deltaTime;
 
             if (Math.abs(velocity.x) < 0.01f) velocity.x = 0;
             if (Math.abs(velocity.z) < 0.01f) velocity.z = 0;
-        }
-
-        // Jump
-        if (Input.isKeyPressed(GLFW.GLFW_KEY_SPACE)) {
-            jump();
         }
     }
 
@@ -126,6 +158,43 @@ public class Player extends Entity {
             velocity.y = JUMP_FORCE;
             onGround = false;
         }
+    }
+
+    @Override
+    protected void applyGravity(float dt) {
+        if (flying) return;
+        super.applyGravity(dt);
+    }
+
+    public void toggleGameMode() {
+        gameMode = gameMode == GameMode.SURVIVAL ? GameMode.CREATIVE : GameMode.SURVIVAL;
+        if (gameMode == GameMode.SURVIVAL) flying = false;
+    }
+
+    public boolean isFlying() {
+        return flying;
+    }
+
+    public GameMode getGameMode() {
+        return gameMode;
+    }
+
+    public void setGameMode(GameMode gameMode) {
+        this.gameMode = gameMode;
+        if (gameMode == GameMode.SURVIVAL) flying = false;
+    }
+
+    public float getHealth() {
+        return health;
+    }
+
+    public void damage(float amount) {
+        if (gameMode == GameMode.CREATIVE) return;
+        health = Math.max(0f, health - amount);
+    }
+
+    public void heal(float amount) {
+        health = Math.min(MAX_HEALTH, health + amount);
     }
 
     private void updateCameraPosition() {
