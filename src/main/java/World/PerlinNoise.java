@@ -183,6 +183,42 @@ public class PerlinNoise {
     }
 
     /**
+     * Ridged multifractal noise at a 2D point.
+     *
+     * Each octave is folded with 1 - |n| so zero-crossings become sharp crests,
+     * and higher octaves are weighted by the octave below so detail gathers on
+     * the ridges while valleys stay smooth. Good for mountain ranges and dunes.
+     *
+     * @param point       World-space 2D coordinate
+     * @param scale       Base frequency
+     * @param octaves     Number of noise layers
+     * @param persistence Amplitude falloff per octave
+     * @param lacunarity  Frequency growth per octave
+     * @return Noise value normalized to [0, 1]
+     */
+    public float getRidgedNoise(Vector2d point, double scale, int octaves, double persistence, double lacunarity) {
+        double value     = 0.0;
+        double amplitude = 1.0;
+        double frequency = scale;
+        double maxValue  = 0.0;
+        double weight    = 1.0;
+
+        for (int i = 0; i < octaves; i++) {
+            double ridge = 1.0 - Math.abs(rawNoise(point.x * frequency, point.y * frequency) * 2.0);
+            ridge = Math.max(0.0, ridge);
+            ridge *= ridge * weight;
+            weight = Math.min(1.0, ridge * 2.0);
+
+            value    += ridge * amplitude;
+            maxValue += amplitude;
+            amplitude *= persistence;
+            frequency *= lacunarity;
+        }
+
+        return (float) Math.max(0.0, Math.min(1.0, value / maxValue));
+    }
+
+    /**
      * Octave noise with Minecraft-like defaults:
      * scale=0.004, octaves=6, persistence=0.5, lacunarity=2.0
      *
