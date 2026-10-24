@@ -11,7 +11,7 @@ import org.joml.Vector3i;
 import java.util.ArrayList;
 
 public abstract class Entity {
-    private static final float GRAVITY_CONSTANT = 2 * 9.81f;
+    private static final float GRAVITY_CONSTANT = 32f;
     protected Transform transform;
     protected Vector3f velocity;
     protected AABB boundingBox;
