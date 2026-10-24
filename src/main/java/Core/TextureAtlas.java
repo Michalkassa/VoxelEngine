@@ -30,6 +30,8 @@ public class TextureAtlas {
         put(BlockTextures.GRASS, new int[]{ 10, 7, 6 });
         put(BlockTextures.DIRT, new int[]{ 6, 6, 6 });
         put(BlockTextures.STONE, new int[]{ 9,9,9 });
+        put(BlockTextures.SAND, new int[]{ 3, 3, 3 });
+        put(BlockTextures.SNOW, new int[]{ 5, 5, 5 });
     }};
 
     private static final float[] CUBE_TEXTURE_MAPPING = {
