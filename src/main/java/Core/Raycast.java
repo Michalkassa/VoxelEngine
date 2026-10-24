@@ -16,7 +16,11 @@ public class Raycast {
     private ChunkManager chunkManager;
 
     public Raycast(World world, float magnitude) {
-        this.chunkManager = world.getChunkManager();
+        this(world.getChunkManager(), magnitude);
+    }
+
+    public Raycast(ChunkManager chunkManager, float magnitude) {
+        this.chunkManager = chunkManager;
         this.magnitude = magnitude;
     }
 

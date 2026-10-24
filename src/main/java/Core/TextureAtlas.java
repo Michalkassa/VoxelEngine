@@ -32,6 +32,8 @@ public class TextureAtlas {
         put(BlockTextures.STONE, new int[]{ 9,9,9 });
         put(BlockTextures.SAND, new int[]{ 3, 3, 3 });
         put(BlockTextures.SNOW, new int[]{ 5, 5, 5 });
+        put(BlockTextures.WOOD, new int[]{ 12, 1, 12 });
+        put(BlockTextures.LEAF, new int[]{ 8, 8, 8 });
     }};
 
     private static final float[] CUBE_TEXTURE_MAPPING = {
@@ -43,18 +45,21 @@ public class TextureAtlas {
             0f, 0f
     };
 
-    public static float[][] topTextureMapping(BlockTextures BlockTexture) {
+    private static int[] indicesFor(BlockTextures BlockTexture) {
         int[] indices = TEXTURE_ATLAS_RELATIVE_INDEX.get(BlockTexture);
 
         if (indices == null) {
             System.err.println("Warning: No texture mapping found for " + BlockTexture + ", using default");
             indices = TEXTURE_ATLAS_RELATIVE_INDEX.get(BlockTextures.DIRT);
             if (indices == null) {
-                indices = new int[]{0};
+                indices = new int[]{0, 0, 0};
             }
         }
+        return indices;
+    }
 
-        int index = indices[0];
+    public static float[][] topTextureMapping(BlockTextures BlockTexture) {
+        int index = indicesFor(BlockTexture)[0];
         int tileX = index % RELATIVE_ATLAS_WIDTH;
         int tileY = index / RELATIVE_ATLAS_WIDTH;
 
@@ -77,7 +82,7 @@ public class TextureAtlas {
 
 
     public static float[][] sideTextureMapping(BlockTextures BlockTexture) {
-        int index = TEXTURE_ATLAS_RELATIVE_INDEX.get(BlockTexture)[1];
+        int index = indicesFor(BlockTexture)[1];
         int tileX = index % RELATIVE_ATLAS_WIDTH;
         int tileY = index / RELATIVE_ATLAS_WIDTH;
 
@@ -100,7 +105,7 @@ public class TextureAtlas {
 
 
     public static float[][] bottomTextureMapping(BlockTextures BlockTexture) {
-        int index = TEXTURE_ATLAS_RELATIVE_INDEX.get(BlockTexture)[2];
+        int index = indicesFor(BlockTexture)[2];
         int tileX = index % RELATIVE_ATLAS_WIDTH;
         int tileY = index / RELATIVE_ATLAS_WIDTH;
 
