@@ -130,6 +130,32 @@ public class TerrainGenerator {
         return (int) Math.max(MIN_HEIGHT, Math.min(MAX_HEIGHT, Math.round(height)));
     }
 
+    public record Column(int height, Block surface, int surfaceDepth) {
+        public Block blockAtDepth(int depth) {
+            if (depth == 0) return surface;
+            if (depth < surfaceDepth) return surface == Block.GRASS ? Block.DIRT : surface;
+            return Block.STONE;
+        }
+    }
+
+    public Column describeColumn(int worldX, int worldZ, int height, int slope) {
+        Vector2d p = new Vector2d(worldX, worldZ);
+        double desert = desertFactor(p, mountainFactor(p));
+        double detail = fbm(detailNoise, p, 0.02, 2);
+        int snowLine = (int) (SNOW_LINE + detail * SNOW_LINE_JITTER);
+
+        if (height >= snowLine && slope < CLIFF_SLOPE) {
+            return new Column(height, Block.SNOW, Math.min(4, 1 + (height - snowLine) / 10));
+        }
+        if (height >= ROCK_HEIGHT || slope >= STEEP_SLOPE) {
+            return new Column(height, Block.STONE, 0);
+        }
+        if (desert > 0.5 + detail * 0.3) {
+            return new Column(height, Block.SAND, SAND_DEPTH);
+        }
+        return new Column(height, Block.GRASS, DIRT_DEPTH);
+    }
+
     public byte[][][] generateChunkTerrain(Vector3i chunkPosition) {
         byte[][][] blocks = new byte[Chunk.CHUNK_SIZE][Chunk.CHUNK_HEIGHT][Chunk.CHUNK_SIZE];
 
@@ -152,38 +178,10 @@ public class TerrainGenerator {
                         Math.abs(heights[x + 1][z + 2] - heights[x + 1][z])
                 );
 
-                Vector2d p = new Vector2d(worldX + x, worldZ + z);
-                double desert = desertFactor(p, mountainFactor(p));
-                double detail = fbm(detailNoise, p, 0.02, 2);
-                int snowLine = (int) (SNOW_LINE + detail * SNOW_LINE_JITTER);
-
-                Block surface;
-                int surfaceDepth;
-                if (height >= snowLine && slope < CLIFF_SLOPE) {
-                    surface = Block.SNOW;
-                    surfaceDepth = Math.min(4, 1 + (height - snowLine) / 10);
-                } else if (height >= ROCK_HEIGHT || slope >= STEEP_SLOPE) {
-                    surface = Block.STONE;
-                    surfaceDepth = 0;
-                } else if (desert > 0.5 + detail * 0.3) {
-                    surface = Block.SAND;
-                    surfaceDepth = SAND_DEPTH;
-                } else {
-                    surface = Block.GRASS;
-                    surfaceDepth = DIRT_DEPTH;
-                }
+                Column column = describeColumn(worldX + x, worldZ + z, height, slope);
 
                 for (int y = 0; y < height; y++) {
-                    int depth = height - 1 - y;
-                    Block block;
-                    if (depth == 0) {
-                        block = surface;
-                    } else if (depth < surfaceDepth) {
-                        block = surface == Block.GRASS ? Block.DIRT : surface;
-                    } else {
-                        block = Block.STONE;
-                    }
-                    blocks[x][y][z] = (byte) block.ordinal();
+                    blocks[x][y][z] = (byte) column.blockAtDepth(height - 1 - y).ordinal();
                 }
             }
         }
