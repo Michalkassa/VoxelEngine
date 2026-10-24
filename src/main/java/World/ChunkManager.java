@@ -33,8 +33,8 @@ public class ChunkManager {
     }
 
     public Chunk getChunk(Vector3f world_position) {
-        int chunkX = Math.floorDiv((int) world_position.x, Chunk.CHUNK_SIZE);
-        int chunkZ = Math.floorDiv((int) world_position.z, Chunk.CHUNK_SIZE);
+        int chunkX = Math.floorDiv((int) Math.floor(world_position.x + 0.5f), Chunk.CHUNK_SIZE);
+        int chunkZ = Math.floorDiv((int) Math.floor(world_position.z + 0.5f), Chunk.CHUNK_SIZE);
         return getChunk(new Vector3i(chunkX, 0, chunkZ));
     }
 
