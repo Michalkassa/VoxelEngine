@@ -2,8 +2,10 @@
 layout (location = 0) in uint aPacked;
 out vec2 TexCoord;
 out float Ambient;
+out vec3 RelativePos;
 uniform vec3 chunk_offset;
 uniform float voxel_scale;
+uniform vec3 camera_position;
 uniform mat4 view_transform;
 uniform mat4 projection_transform;
 
@@ -17,4 +19,6 @@ void main()
     gl_Position = projection_transform * view_transform * vec4(worldPos, 1.0);
     TexCoord = vec2(float((aPacked >> 19u) & 31u), float((aPacked >> 24u) & 31u)) / 16.0;
     Ambient = AO_BRIGHTNESS[(aPacked >> 29u) & 3u];
+    // Relative to the camera so the values stay small and precise far from the world origin
+    RelativePos = worldPos - camera_position;
 }

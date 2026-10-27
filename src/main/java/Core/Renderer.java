@@ -15,7 +15,10 @@ import static org.lwjgl.opengl.GL11.glCullFace;
 import static org.lwjgl.opengl.GL11.glEnable;
 import static org.lwjgl.opengl.GL11.glFrontFace;
 import static org.lwjgl.opengl.GL20.glGetUniformLocation;
+import static org.lwjgl.opengl.GL20.glUniform3f;
 import static org.lwjgl.opengl.GL20.glUniformMatrix4fv;
+
+import org.joml.Vector3f;
 
 import World.Chunk;
 import World.World;
@@ -35,8 +38,11 @@ public class Renderer {
     private int voxel_scale;
     private int view_transform ;
     private int  projection_transform;
+    private int camera_position;
+    private int sun_direction;
 
     private final float[] matBuffer = new float[16];
+    private final Vector3f sunDirection = new Vector3f();
 
     public Renderer(World world, Camera camera) {
         this.world = world;
@@ -57,6 +63,8 @@ public class Renderer {
         voxel_scale = glGetUniformLocation(shader.getShaderProgram(), "voxel_scale");
         view_transform = glGetUniformLocation(shader.getShaderProgram(), "view_transform");
         projection_transform = glGetUniformLocation(shader.getShaderProgram(), "projection_transform");
+        camera_position = glGetUniformLocation(shader.getShaderProgram(), "camera_position");
+        sun_direction = glGetUniformLocation(shader.getShaderProgram(), "sun_direction");
 
         int[] width = new int[1];
         int[] height = new int[1];
@@ -83,6 +91,9 @@ public class Renderer {
 
         glUniformMatrix4fv(view_transform, false, view.get(matBuffer));
         glUniformMatrix4fv(projection_transform, false, projection.get(matBuffer));
+        glUniform3f(camera_position, camera.position.x, camera.position.y, camera.position.z);
+        world.getSun().getDirection(sunDirection);
+        glUniform3f(sun_direction, sunDirection.x, sunDirection.y, sunDirection.z);
 
 
         texture.bind();
