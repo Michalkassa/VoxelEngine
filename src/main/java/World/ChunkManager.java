@@ -33,21 +33,26 @@ public class ChunkManager {
     }
 
     private void queueMeshCandidates(Vector3i position) {
-        pendingMeshes.add(position);
-        pendingMeshes.add(new Vector3i(position.x + 1, 0, position.z));
-        pendingMeshes.add(new Vector3i(position.x - 1, 0, position.z));
-        pendingMeshes.add(new Vector3i(position.x, 0, position.z + 1));
-        pendingMeshes.add(new Vector3i(position.x, 0, position.z - 1));
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                pendingMeshes.add(new Vector3i(position.x + dx, 0, position.z + dz));
+            }
+        }
     }
 
+    // Ambient occlusion reads blocks diagonally across chunk corners, so all 8 neighbours are needed
     public boolean hasAllNeighbours(Vector3i position) {
-        return chunks.containsKey(new Vector3i(position.x + 1, 0, position.z))
-                && chunks.containsKey(new Vector3i(position.x - 1, 0, position.z))
-                && chunks.containsKey(new Vector3i(position.x, 0, position.z + 1))
-                && chunks.containsKey(new Vector3i(position.x, 0, position.z - 1));
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                if ((dx != 0 || dz != 0) && !chunks.containsKey(new Vector3i(position.x + dx, 0, position.z + dz))) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
-    // A chunk is meshed once, when all 4 neighbours exist, so loading never forces a rebuild
+    // A chunk is meshed once, when all 8 neighbours exist, so loading never forces a rebuild
     private int buildPendingMeshes(int limit) {
         int built = 0;
         Iterator<Vector3i> iterator = pendingMeshes.iterator();
@@ -120,10 +125,18 @@ public class ChunkManager {
             chunk.buildMesh();
         }
 
-        if (localCoordinates.x == 0) rebuildMeshedChunk(chunkCoordinates.x - 1, chunkCoordinates.z);
-        if (localCoordinates.x == Chunk.CHUNK_SIZE - 1) rebuildMeshedChunk(chunkCoordinates.x + 1, chunkCoordinates.z);
-        if (localCoordinates.z == 0) rebuildMeshedChunk(chunkCoordinates.x, chunkCoordinates.z - 1);
-        if (localCoordinates.z == Chunk.CHUNK_SIZE - 1) rebuildMeshedChunk(chunkCoordinates.x, chunkCoordinates.z + 1);
+        // Blocks on an edge shade faces in the neighbouring chunk, and corner blocks in the diagonal one too
+        int edgeX = edgeDirection(localCoordinates.x);
+        int edgeZ = edgeDirection(localCoordinates.z);
+        if (edgeX != 0) rebuildMeshedChunk(chunkCoordinates.x + edgeX, chunkCoordinates.z);
+        if (edgeZ != 0) rebuildMeshedChunk(chunkCoordinates.x, chunkCoordinates.z + edgeZ);
+        if (edgeX != 0 && edgeZ != 0) rebuildMeshedChunk(chunkCoordinates.x + edgeX, chunkCoordinates.z + edgeZ);
+    }
+
+    private static int edgeDirection(int local) {
+        if (local == 0) return -1;
+        if (local == Chunk.CHUNK_SIZE - 1) return 1;
+        return 0;
     }
 
     private void rebuildMeshedChunk(int chunkX, int chunkZ) {

@@ -79,13 +79,20 @@ final class BlockFaces {
     // The 6-vertex faces repeat vertex 2 and 0, so vertices 0, 1, 2 and 4 are the quad corners
     private static final int[] QUAD_CORNERS = { 0, 1, 2, 4 };
 
-    // Packed vertex: x (5 bits) | y (9 bits) | z (5 bits) | u * 16 (5 bits) | v * 16 (5 bits)
+    // Packed vertex: x (5 bits) | y (9 bits) | z (5 bits) | u * 16 (5 bits) | v * 16 (5 bits) | ao (2 bits)
     private static final int Y_SHIFT = 5;
     private static final int Z_SHIFT = 14;
     private static final int UV_SHIFT = 19;
     private static final int UV_SCALE = 16;
+    private static final int AO_SHIFT = 29;
+
+    // Ambient occlusion per corner: 0 is fully enclosed, 3 is fully open
+    static final int AO_OPEN = 3;
+    private static final int[] NO_OCCLUSION = { AO_OPEN, AO_OPEN, AO_OPEN, AO_OPEN };
 
     private static final int[][][] FACE_CORNER_OFFSETS = new int[FACES.length][4][3];
+    // For each face corner, the blocks in front of the face that can shade it: side 1, side 2 and the diagonal
+    static final int[][][][] AO_SAMPLE_OFFSETS = new int[FACES.length][4][3][3];
     private static final int[][][] PACKED_UVS = buildPackedUvs();
 
     static {
@@ -95,8 +102,33 @@ final class BlockFaces {
                 for (int axis = 0; axis < 3; axis++) {
                     FACE_CORNER_OFFSETS[face][corner][axis] = Math.round(vertex[axis] + 0.5f);
                 }
+                buildAoSamples(face, corner);
             }
         }
+    }
+
+    // The samples sit in the layer of blocks the face looks into, stepping from the face centre towards the corner
+    private static void buildAoSamples(int face, int corner) {
+        int[] normal = FACE_NORMALS[face];
+        int[] offset = FACE_CORNER_OFFSETS[face][corner];
+        int[][] samples = AO_SAMPLE_OFFSETS[face][corner];
+        int side = 0;
+        for (int axis = 0; axis < 3; axis++) {
+            int towardsCorner = normal[axis] != 0 ? normal[axis] : offset[axis] * 2 - 1;
+            samples[2][axis] = towardsCorner;
+            for (int sample = 0; sample < 2; sample++) {
+                samples[sample][axis] = normal[axis];
+            }
+            if (normal[axis] == 0) {
+                samples[side++][axis] = towardsCorner;
+            }
+        }
+    }
+
+    // Two solid sides already hide the corner, whatever the diagonal block is
+    static int ambientOcclusion(boolean side1, boolean side2, boolean diagonal) {
+        if (side1 && side2) return 0;
+        return AO_OPEN - ((side1 ? 1 : 0) + (side2 ? 1 : 0) + (diagonal ? 1 : 0));
     }
 
     static final int FACE_COUNT = FACES.length;
@@ -125,15 +157,27 @@ final class BlockFaces {
     }
 
     static int pack(int x, int y, int z, int packedUv) {
-        return x | (y << Y_SHIFT) | (z << Z_SHIFT) | (packedUv << UV_SHIFT);
+        return pack(x, y, z, packedUv, AO_OPEN);
+    }
+
+    static int pack(int x, int y, int z, int packedUv, int ao) {
+        return x | (y << Y_SHIFT) | (z << Z_SHIFT) | (packedUv << UV_SHIFT) | (ao << AO_SHIFT);
     }
 
     // Writes the 4 corners of one face of the block at (x, y, z) scaled by 1, returning the new count
     static int emitFace(int[] buffer, int count, int face, int block, int x, int y, int z) {
+        return emitFace(buffer, count, face, block, x, y, z, NO_OCCLUSION);
+    }
+
+    static int emitFace(int[] buffer, int count, int face, int block, int x, int y, int z, int[] ao) {
         int[] uvs = PACKED_UVS[block < PACKED_UVS.length ? block : 0][FACE_TEXTURE[face]];
-        for (int corner = 0; corner < 4; corner++) {
+        // The quad is split along corners 0-2. When the other diagonal is brighter, start at corner 1
+        // so the split runs along it instead, otherwise the shading on the face looks lopsided.
+        int first = ao[0] + ao[2] < ao[1] + ao[3] ? 1 : 0;
+        for (int i = 0; i < 4; i++) {
+            int corner = (first + i) & 3;
             int[] offset = FACE_CORNER_OFFSETS[face][corner];
-            buffer[count++] = pack(x + offset[0], y + offset[1], z + offset[2], uvs[corner]);
+            buffer[count++] = pack(x + offset[0], y + offset[1], z + offset[2], uvs[corner], ao[corner]);
         }
         return count;
     }
@@ -143,4 +187,5 @@ final class BlockFaces {
     static int unpackZ(int vertex) { return (vertex >>> Z_SHIFT) & 31; }
     static float unpackU(int vertex) { return ((vertex >>> UV_SHIFT) & 31) / (float) UV_SCALE; }
     static float unpackV(int vertex) { return ((vertex >>> (UV_SHIFT + 5)) & 31) / (float) UV_SCALE; }
+    static int unpackAo(int vertex) { return (vertex >>> AO_SHIFT) & 3; }
 }

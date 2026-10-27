@@ -96,25 +96,30 @@ public class Chunk {
         return chunkManager.getChunk(new Vector3i(chunkPosition.x + dx, 0, chunkPosition.z + dz));
     }
 
-    private static boolean isSolid(Chunk chunk, int x, int y, int z) {
-        return chunk != null && chunk.blockAt(x, y, z) != 0;
+    // This chunk and its 8 neighbours, indexed by (dx + 1) * 3 + (dz + 1)
+    private Chunk[] surroundingChunks() {
+        Chunk[] around = new Chunk[9];
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                around[(dx + 1) * 3 + (dz + 1)] = dx == 0 && dz == 0 ? this : neighbour(dx, dz);
+            }
+        }
+        return around;
     }
 
-    private boolean isNeighbourSolid(int x, int y, int z, Chunk north, Chunk south, Chunk east, Chunk west) {
+    // Looks up a block up to one chunk away on x and z. Below the world counts as solid, above it as air.
+    private static boolean isSolidAt(int x, int y, int z, Chunk[] around) {
         if (y < 0) return true;
         if (y >= CHUNK_HEIGHT) return false;
-        if (x < 0) return isSolid(south, x + CHUNK_SIZE, y, z);
-        if (x >= CHUNK_SIZE) return isSolid(north, x - CHUNK_SIZE, y, z);
-        if (z < 0) return isSolid(west, x, y, z + CHUNK_SIZE);
-        if (z >= CHUNK_SIZE) return isSolid(east, x, y, z - CHUNK_SIZE);
-        return blockAt(x, y, z) != 0;
+        int dx = x < 0 ? -1 : x >= CHUNK_SIZE ? 1 : 0;
+        int dz = z < 0 ? -1 : z >= CHUNK_SIZE ? 1 : 0;
+        Chunk chunk = around[(dx + 1) * 3 + (dz + 1)];
+        return chunk != null && chunk.blockAt(x - dx * CHUNK_SIZE, y, z - dz * CHUNK_SIZE) != 0;
     }
 
     public int[] buildVertexData() {
-        Chunk north = neighbour(1, 0);
-        Chunk south = neighbour(-1, 0);
-        Chunk east = neighbour(0, 1);
-        Chunk west = neighbour(0, -1);
+        Chunk[] around = surroundingChunks();
+        int[] ao = new int[4];
 
         int[] buffer = SCRATCH.get();
         int count = 0;
@@ -133,14 +138,21 @@ public class Chunk {
 
                 for (int face = 0; face < BlockFaces.FACE_COUNT; face++) {
                     int[] normal = BlockFaces.FACE_NORMALS[face];
-                    if (isNeighbourSolid(x + normal[0], y + normal[1], z + normal[2], north, south, east, west)) continue;
+                    if (isSolidAt(x + normal[0], y + normal[1], z + normal[2], around)) continue;
 
                     if (count + 4 > buffer.length) {
                         buffer = Arrays.copyOf(buffer, buffer.length * 2);
                         SCRATCH.set(buffer);
                     }
 
-                    count = BlockFaces.emitFace(buffer, count, face, block, x, y, z);
+                    for (int corner = 0; corner < 4; corner++) {
+                        int[][] samples = BlockFaces.AO_SAMPLE_OFFSETS[face][corner];
+                        ao[corner] = BlockFaces.ambientOcclusion(
+                                isSolidAt(x + samples[0][0], y + samples[0][1], z + samples[0][2], around),
+                                isSolidAt(x + samples[1][0], y + samples[1][1], z + samples[1][2], around),
+                                isSolidAt(x + samples[2][0], y + samples[2][1], z + samples[2][2], around));
+                    }
+                    count = BlockFaces.emitFace(buffer, count, face, block, x, y, z, ao);
                 }
             }
         }
@@ -153,6 +165,7 @@ public class Chunk {
     public static int unpackZ(int vertex) { return BlockFaces.unpackZ(vertex); }
     public static float unpackU(int vertex) { return BlockFaces.unpackU(vertex); }
     public static float unpackV(int vertex) { return BlockFaces.unpackV(vertex); }
+    public static int unpackAo(int vertex) { return BlockFaces.unpackAo(vertex); }
 
     public void buildMesh(){
         int[] data = buildVertexData();
