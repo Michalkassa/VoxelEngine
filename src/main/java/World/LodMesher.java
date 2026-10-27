@@ -25,6 +25,17 @@ public final class LodMesher {
             }
         }
 
+        // Column tops in voxels, with a ring of neighbouring columns around the region
+        int[][] tops = new int[COLUMNS + 2][COLUMNS + 2];
+        for (int i = 0; i < COLUMNS + 2; i++) {
+            for (int k = 0; k < COLUMNS + 2; k++) {
+                tops[i][k] = voxelHeight(heights[i][k], scale);
+            }
+        }
+        // A voxel is solid when it is below its column's top. Ambient occlusion only samples one column out.
+        BlockFaces.Solidity solidity = (vi, vy, vk) -> vy < 0 || vy < tops[vi + 1][vk + 1];
+        int[] ao = new int[4];
+
         int[] buffer = new int[COLUMNS * COLUMNS * 24];
         int count = 0;
 
@@ -36,23 +47,25 @@ public final class LodMesher {
                         Math.abs(heights[i + 1][k + 2] - heights[i + 1][k])) / scale;
                 TerrainGenerator.Column column = generator.describeColumn(
                         originX + i * scale + scale / 2, originZ + k * scale + scale / 2, height, slope);
-                int top = voxelHeight(height, scale);
+                int top = tops[i + 1][k + 1];
 
                 if (count + 4 > buffer.length) buffer = Arrays.copyOf(buffer, buffer.length * 2);
-                count = BlockFaces.emitFace(buffer, count, 0, blockAt(column, top, top - 1, scale), i, top - 1, k);
+                BlockFaces.faceAmbientOcclusion(0, i, top - 1, k, solidity, ao);
+                count = BlockFaces.emitFace(buffer, count, 0, blockAt(column, top, top - 1, scale), i, top - 1, k, ao);
 
                 for (int face = 2; face < BlockFaces.FACE_COUNT; face++) {
                     int[] normal = BlockFaces.FACE_NORMALS[face];
                     int ni = i + normal[0];
                     int nk = k + normal[2];
-                    int neighbourTop = voxelHeight(heights[ni + 1][nk + 1], scale);
+                    int neighbourTop = tops[ni + 1][nk + 1];
                     boolean border = ni < 0 || ni >= COLUMNS || nk < 0 || nk >= COLUMNS;
                     // A one voxel skirt at region edges covers gaps against neighbours at other detail levels
                     int exposedFrom = border ? Math.max(0, neighbourTop - 1) : neighbourTop;
 
                     for (int vy = exposedFrom; vy < top; vy++) {
                         if (count + 4 > buffer.length) buffer = Arrays.copyOf(buffer, buffer.length * 2);
-                        count = BlockFaces.emitFace(buffer, count, face, blockAt(column, top, vy, scale), i, vy, k);
+                        BlockFaces.faceAmbientOcclusion(face, i, vy, k, solidity, ao);
+                        count = BlockFaces.emitFace(buffer, count, face, blockAt(column, top, vy, scale), i, vy, k, ao);
                     }
                 }
             }

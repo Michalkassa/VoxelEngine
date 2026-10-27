@@ -264,6 +264,109 @@ class ChunkMeshDataTest {
         assertEquals(expected, quadCount(chunks.get(new Vector3i(0, 0, 0)).buildVertexData()));
     }
 
+    // Ambient occlusion of each corner of the top face of the block at (x, y, z), keyed by "x,z" of the corner
+    private static Map<String, Integer> topFaceAo(int[] data, int x, int y, int z) {
+        Map<String, Integer> ao = new HashMap<>();
+        for (int quad = 0; quad < quadCount(data); quad++) {
+            if (quadNormal(data, quad).y < 0.5f) continue;
+            int first = data[quad * 4];
+            if (Chunk.unpackY(first) != y + 1) continue;
+            Set<String> corners = new HashSet<>();
+            for (int i = 0; i < 4; i++) {
+                int vertex = data[quad * 4 + i];
+                corners.add(Chunk.unpackX(vertex) + "," + Chunk.unpackZ(vertex));
+            }
+            if (!corners.contains(x + "," + z) || !corners.contains((x + 1) + "," + (z + 1))) continue;
+            for (int i = 0; i < 4; i++) {
+                int vertex = data[quad * 4 + i];
+                ao.put(Chunk.unpackX(vertex) + "," + Chunk.unpackZ(vertex), Chunk.unpackAo(vertex));
+            }
+        }
+        assertEquals(4, ao.size(), "top face of " + x + "," + y + "," + z);
+        return ao;
+    }
+
+    @Test
+    void ambientOcclusionLevels() {
+        assertEquals(3, BlockFaces.ambientOcclusion(false, false, false));
+        assertEquals(2, BlockFaces.ambientOcclusion(false, false, true));
+        assertEquals(2, BlockFaces.ambientOcclusion(true, false, false));
+        assertEquals(1, BlockFaces.ambientOcclusion(true, false, true));
+        assertEquals(0, BlockFaces.ambientOcclusion(true, true, false));
+        assertEquals(0, BlockFaces.ambientOcclusion(true, true, true));
+    }
+
+    @Test
+    void isolatedBlockIsFullyLit() {
+        byte[][][] blocks = emptyBlocks();
+        blocks[8][100][8] = STONE;
+
+        for (int vertex : addChunk(0, 0, blocks).buildVertexData()) {
+            assertEquals(3, Chunk.unpackAo(vertex));
+        }
+    }
+
+    @Test
+    void wallBesideFloorDarkensTheSharedEdge() {
+        byte[][][] blocks = emptyBlocks();
+        blocks[8][100][8] = STONE;
+        blocks[9][101][8] = STONE;
+
+        Map<String, Integer> ao = topFaceAo(addChunk(0, 0, blocks).buildVertexData(), 8, 100, 8);
+
+        assertEquals(2, ao.get("9,8"));
+        assertEquals(2, ao.get("9,9"));
+        assertEquals(3, ao.get("8,8"));
+        assertEquals(3, ao.get("8,9"));
+    }
+
+    @Test
+    void cornerBetweenTwoWallsIsFullyDark() {
+        byte[][][] blocks = emptyBlocks();
+        blocks[8][100][8] = STONE;
+        blocks[9][101][8] = STONE;
+        blocks[8][101][9] = STONE;
+
+        Map<String, Integer> ao = topFaceAo(addChunk(0, 0, blocks).buildVertexData(), 8, 100, 8);
+
+        assertEquals(0, ao.get("9,9"));
+        assertEquals(2, ao.get("9,8"));
+        assertEquals(2, ao.get("8,9"));
+        assertEquals(3, ao.get("8,8"));
+    }
+
+    @Test
+    void ambientOcclusionReadsDiagonalNeighbourChunk() {
+        byte[][][] here = emptyBlocks();
+        here[15][100][15] = STONE;
+        byte[][][] diagonal = emptyBlocks();
+        diagonal[0][101][0] = STONE;
+        Chunk chunk = addChunk(0, 0, here);
+        addChunk(1, 1, diagonal);
+
+        Map<String, Integer> ao = topFaceAo(chunk.buildVertexData(), 15, 100, 15);
+
+        assertEquals(2, ao.get("16,16"));
+        assertEquals(3, ao.get("15,15"));
+    }
+
+    @Test
+    void quadSplitsAlongTheBrighterDiagonal() {
+        byte[][][] blocks = emptyBlocks();
+        blocks[8][100][8] = STONE;
+        blocks[9][101][9] = STONE;
+        int[] data = addChunk(0, 0, blocks).buildVertexData();
+
+        for (int quad = 0; quad < quadCount(data); quad++) {
+            if (quadNormal(data, quad).y < 0.5f || Chunk.unpackY(data[quad * 4]) != 101) continue;
+            int[] ao = new int[4];
+            for (int i = 0; i < 4; i++) ao[i] = Chunk.unpackAo(data[quad * 4 + i]);
+            assertTrue(ao[0] + ao[2] >= ao[1] + ao[3], "quad " + quad + " splits through the dark corner");
+            return;
+        }
+        fail("top face not found");
+    }
+
     @Test
     void repeatedBuildsReturnIdenticalData() {
         byte[][][] blocks = new TerrainGenerator(3).generateChunkTerrain(new Vector3i());

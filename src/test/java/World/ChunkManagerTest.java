@@ -173,14 +173,20 @@ class ChunkManagerTest {
     }
 
     @Test
-    void hasAllNeighboursRequiresFourSides() {
+    void hasAllNeighboursRequiresSidesAndDiagonals() {
         Vector3i center = new Vector3i(0, 0, 0);
         chunkManager.loadChunkAsync(new Vector3i(1, 0, 0));
         chunkManager.loadChunkAsync(new Vector3i(-1, 0, 0));
         chunkManager.loadChunkAsync(new Vector3i(0, 0, 1));
+        chunkManager.loadChunkAsync(new Vector3i(0, 0, -1));
         assertFalse(chunkManager.hasAllNeighbours(center));
 
-        chunkManager.loadChunkAsync(new Vector3i(0, 0, -1));
+        chunkManager.loadChunkAsync(new Vector3i(1, 0, 1));
+        chunkManager.loadChunkAsync(new Vector3i(1, 0, -1));
+        chunkManager.loadChunkAsync(new Vector3i(-1, 0, 1));
+        assertFalse(chunkManager.hasAllNeighbours(center));
+
+        chunkManager.loadChunkAsync(new Vector3i(-1, 0, -1));
         assertTrue(chunkManager.hasAllNeighbours(center));
     }
 
