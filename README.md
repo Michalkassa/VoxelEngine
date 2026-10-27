@@ -4,8 +4,8 @@ A Minecraft-style voxel engine written from scratch in **Java** with **LWJGL 3**
 
 I built it to learn graphics programming and Java, and eventually to write my own mods for it.
 
-![Procedurally generated valley with stone-capped peaks, running at 300+ FPS](docs/screenshots/terrain.jpg)
-<sub>Procedurally generated valley with stone-capped peaks, at 300+ FPS on an Apple Silicon Mac. The debug HUD is in the top left.</sub>
+<img src="docs/screenshots/progress-6.jpg" alt="Grassland and deserts stretching to snow-capped mountains on the horizon, rendered with level of detail" width="100%">
+<sub>Grassland, deserts and snow-capped mountains, with level of detail drawing terrain out to 128 chunks (about 2,000 blocks) on an Apple Silicon Mac. The debug HUD is in the top left.</sub>
 
 ---
 
@@ -14,6 +14,7 @@ I built it to learn graphics programming and Java, and eventually to write my ow
 - **Procedural terrain**: several layers of Perlin noise build the height map. Most of the world is small rolling hills and sandy deserts with dunes. Rare mountain ranges rise to snow-capped peaks, with bare stone on cliffs. The same seed always gives the same world.
 - **Infinite chunk streaming**: 16×256×16 chunks load and unload around the player on a dedicated `ChunkLoader` thread. Meshes are uploaded to the GPU on the main thread, a few per frame, so the game keeps running smoothly while chunks load.
 - **Optimised meshing**: faces hidden by a neighbouring block are skipped, including faces on chunk borders. Each vertex is packed into a single `int`, and blocks are stored in sections so empty air takes no memory.
+- **Level of detail**: full-detail chunks are drawn out to 32 chunks. Beyond that, a quadtree swaps in simplified terrain with bigger blocks, so the world is visible out to 128 chunks.
 - **Frustum culling**: chunks outside the camera's view are never drawn.
 - **Texture atlas**: every block type samples from a single texture, so only one texture is bound per frame.
 - **Game modes**: Survival, with health, and Creative, where you can't take damage and can fly. Press `G` to switch.
@@ -22,19 +23,66 @@ I built it to learn graphics programming and Java, and eventually to write my ow
 - **HUD**: a NanoVG overlay with a crosshair, FPS counter, position, velocity, current chunk, game mode and health.
 - **Tests and CI**: JUnit 5 unit tests cover the maths, terrain generation, chunks, physics, player and save files. GitHub Actions builds and tests every pull request.
 
-## Development progress
+## Development timeline
 
-How the engine got from nothing to where it is now. There's more to come.
+How the engine got from nothing to where it is now, oldest first. There's more to come.
 
-| 1. First triangle | 2. Blocks & chunks |
-|---|---|
-| ![First triangle](docs/screenshots/progress-1.jpg) | ![Random block terrain](docs/screenshots/progress-2.jpg) |
-| Getting OpenGL running: shaders, a VAO and vertex colours. | A textured, chunked block world with random heights. |
-| **3. Perlin noise terrain** | **4. Today** |
-| ![Perlin noise hills](docs/screenshots/progress-3.jpg) | ![Current engine](docs/screenshots/progress-4.jpg) |
-| Smooth rolling hills from layered Perlin noise. | Mountains, stone layers, a sky, physics, a HUD, and multithreaded chunk streaming at 300+ FPS. |
+```
+ Jan 2026  ●  1. First triangle
+           │
+ Feb 2026  ●  2. Blocks & chunks
+           │
+ Mar 2026  ●  3. Perlin noise terrain
+           │
+ Mar 2026  ●  4. Physics, HUD & multithreading
+           │
+ Oct 2026  ●  5. New terrain, game modes & memory optimisations
+           │
+ Oct 2026  ◉  6. Level of detail  ◀ you are here
+```
 
-### 5. Memory and rendering optimisations
+---
+
+### ● Stage 1 · First triangle
+**January 2026**
+
+<img src="docs/screenshots/progress-1.jpg" alt="First triangle" width="100%">
+
+Getting OpenGL running: shaders, a VAO and vertex colours.
+
+<p align="center">⬇</p>
+
+### ● Stage 2 · Blocks & chunks
+**February 2026**
+
+<img src="docs/screenshots/progress-2.jpg" alt="Random block terrain" width="100%">
+
+A textured, chunked block world with random heights.
+
+<p align="center">⬇</p>
+
+### ● Stage 3 · Perlin noise terrain
+**March 2026**
+
+<img src="docs/screenshots/progress-3.jpg" alt="Perlin noise hills" width="100%">
+
+Smooth rolling hills from layered Perlin noise.
+
+<p align="center">⬇</p>
+
+### ● Stage 4 · Physics, HUD & multithreading
+**March 2026**
+
+<img src="docs/screenshots/progress-4.jpg" alt="Valley with stone-capped peaks at 300+ FPS" width="100%">
+
+Mountains, stone layers, a sky, physics, a HUD, and multithreaded chunk streaming at 300+ FPS.
+
+<p align="center">⬇</p>
+
+### ● Stage 5 · New terrain, game modes & memory optimisations
+**October 2026**
+
+The terrain generator was rewritten with layered height maps for hills, deserts with dunes and rare snow-capped mountain ranges. Survival and Creative game modes, flight, health, unit tests and CI were added.
 
 Large render distances were using several gigabytes of memory, so I measured where it was going and rewrote how chunks are stored and drawn. At a render distance of 32 chunks (4,225 chunks loaded):
 
@@ -61,6 +109,21 @@ Large render distances were using several gigabytes of memory, so I measured whe
 - **Pack data for the GPU.** A face went from 6 vertices × 5 floats (120 bytes) to 4 vertices × 1 int (16 bytes). The shader does the unpacking for free.
 - **Don't draw what can never be seen.** Faces on the bottom of the world were about 40% of every chunk's mesh.
 - **Order the work so it only happens once.** Waiting until a chunk's neighbours exist means it's meshed once, instead of being rebuilt every time a neighbour loads.
+
+<p align="center">⬇</p>
+
+### ◉ Stage 6 · Level of detail (today)
+**October 2026**
+
+<img src="docs/screenshots/progress-6.jpg" alt="Distant mountains and deserts drawn with level of detail" width="100%">
+
+Full-detail chunks stop at 32 chunks, but the world now stretches to the horizon. Distant mountains, deserts and hills are all visible, at around 100 FPS with a render distance of 128 chunks.
+
+- **Quadtree selection:** the area around the player is split into a quadtree. Chunks within 32 chunks are drawn at full detail, then regions use blocks 2× as big from 32 chunks, 4× from 64 and 8× from 128.
+- **LOD meshes straight from the generator:** distant regions are built as 16×16 columns directly from the terrain generator, without storing any block data. Only the mesh is kept.
+- **Hiding seams:** column heights round up, and every region edge gets a one-voxel skirt, so no gaps show between detail levels.
+- **Scaled in the shader:** LOD voxels are scaled up in the vertex shader with a `voxel_scale` uniform, and the far plane grows to cover the whole render distance.
+- **Shared rules:** chunks and LOD regions use the same column surface rules (`TerrainGenerator.describeColumn`) and face tables (`BlockFaces`), so distant terrain matches what you see up close.
 
 **Next:** placing blocks, saving worlds, biomes, caves and lighting. See the [roadmap](#roadmap).
 
@@ -117,9 +180,9 @@ The first launch downloads the dependencies. After that, the spawn area is gener
 ## How it works
 
 1. **Generation:** `TerrainGenerator` combines several Perlin noise layers for each column: broad swells, small hills, a desert mask with ridged dunes, and a rare mountain mask with ridged peaks. The coordinates are warped so nothing lines up on a grid. Surface blocks are then chosen from height and slope: snow above the snow line, stone on high ground and cliffs, sand in deserts and grass elsewhere.
-2. **Streaming:** `ChunkLoader` runs on its own thread. It works out which chunks fall inside the render distance, generates their block data, and queues them.
+2. **Streaming:** `ChunkLoader` runs on its own thread. It works out which chunks fall inside the full-detail distance, generates their block data, and queues them. Further out, `LodManager` picks LOD regions from a quadtree (`LodSelection`), and `LodMesher` builds their simplified meshes straight from the terrain generator.
 3. **Meshing:** each frame, `ChunkManager.buildQueuedMeshes()` meshes up to 2 chunks whose 4 neighbours are all loaded, so each chunk is meshed only once. Only visible faces are emitted, and each vertex is packed into a single `int`.
-4. **Rendering:** `Renderer` updates the view frustum. Chunks outside it, and chunks with nothing to draw, are skipped. The rest are drawn nearest first, using one shader, one texture atlas and one shared index buffer. The NanoVG HUD is drawn on top.
+4. **Rendering:** `Renderer` updates the view frustum. Chunks outside it, and chunks with nothing to draw, are skipped. Full-detail chunks are drawn first, then LOD regions, each nearest first, using one shader, one texture atlas and one shared index buffer. The NanoVG HUD is drawn on top.
 
 ## Roadmap
 
