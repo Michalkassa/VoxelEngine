@@ -4,15 +4,16 @@ A Minecraft-style voxel engine written from scratch in **Java** with **LWJGL 3**
 
 I built it to learn graphics programming and Java, and eventually to write my own mods for it.
 
-<img src="docs/screenshots/progress-6.jpg" alt="Grassland and deserts stretching to snow-capped mountains on the horizon, rendered with level of detail" width="100%">
-<sub>Grassland, deserts and snow-capped mountains, with level of detail drawing terrain out to 128 chunks (about 2,000 blocks) on an Apple Silicon Mac. The debug HUD is in the top left.</sub>
+<img src="docs/screenshots/progress-7.jpg" alt="Snow-capped stone mountains rising from grassland, shaded by sunlight and ambient occlusion" width="100%">
+<sub>Snow-capped mountains shaded by sunlight and ambient occlusion, with level of detail drawing terrain out to 128 chunks (about 2,000 blocks), at around 120 FPS on an Apple Silicon Mac. The debug HUD is in the top left.</sub>
 
 ---
 
 ## Features
 
 - **Procedural terrain**: several layers of Perlin noise build the height map. Most of the world is small rolling hills and sandy deserts with dunes. Rare mountain ranges rise to snow-capped peaks, with bare stone on cliffs. The same seed always gives the same world.
-- **Infinite chunk streaming**: 16×256×16 chunks load and unload around the player on a dedicated `ChunkLoader` thread. Meshes are uploaded to the GPU on the main thread, a few per frame, so the game keeps running smoothly while chunks load.
+- **Infinite chunk streaming**: 16×256×16 chunks load and unload around the player, nearest first, generated in parallel on a pool of worker threads. Meshes are uploaded to the GPU on the main thread, a few per frame, so the game keeps running smoothly while chunks load.
+- **Lighting**: per-vertex ambient occlusion darkens creases and corners, and directional sunlight shades each face by how directly it faces the sun. Both work on near and distant terrain.
 - **Optimised meshing**: faces hidden by a neighbouring block are skipped, including faces on chunk borders. Each vertex is packed into a single `int`, and blocks are stored in sections so empty air takes no memory.
 - **Level of detail**: full-detail chunks are drawn out to 32 chunks. Beyond that, a quadtree swaps in simplified terrain with bigger blocks, so the world is visible out to 128 chunks.
 - **Frustum culling**: chunks outside the camera's view are never drawn.
@@ -38,7 +39,9 @@ How the engine got from nothing to where it is now, oldest first. There's more t
            │
  Oct 2026  ●  5. New terrain, game modes & memory optimisations
            │
- Oct 2026  ◉  6. Level of detail  ◀ you are here
+ Oct 2026  ●  6. Level of detail
+           │
+ Oct 2026  ◉  7. Lighting & multithreaded loading  ◀ you are here
 ```
 
 ---
@@ -112,7 +115,7 @@ Large render distances were using several gigabytes of memory, so I measured whe
 
 <p align="center">⬇</p>
 
-### ◉ Stage 6 · Level of detail (today)
+### ● Stage 6 · Level of detail
 **October 2026**
 
 <img src="docs/screenshots/progress-6.jpg" alt="Distant mountains and deserts drawn with level of detail" width="100%">
@@ -125,7 +128,45 @@ Full-detail chunks stop at 32 chunks, but the world now stretches to the horizon
 - **Scaled in the shader:** LOD voxels are scaled up in the vertex shader with a `voxel_scale` uniform, and the far plane grows to cover the whole render distance.
 - **Shared rules:** chunks and LOD regions use the same column surface rules (`TerrainGenerator.describeColumn`) and face tables (`BlockFaces`), so distant terrain matches what you see up close.
 
-**Next:** placing blocks, saving worlds, biomes, caves and lighting. See the [roadmap](#roadmap).
+<p align="center">⬇</p>
+
+### ◉ Stage 7 · Lighting & multithreaded loading (today)
+**October 2026**
+
+<img src="docs/screenshots/progress-7.jpg" alt="Mountains shaded by sunlight and ambient occlusion" width="100%">
+
+The terrain now has depth: creases and the feet of cliffs are darker, and every face is shaded by the sun. Chunks also stream in hundreds of times faster.
+
+**Ambient occlusion**
+
+- **Three blocks per corner:** each corner of a visible face checks the two blocks beside it and the one diagonal to it, giving 4 levels from fully open to fully enclosed.
+- **No extra memory:** the level is stored in 2 spare bits of the packed vertex, which stays 4 bytes.
+- **Even shading:** each face is split into two triangles along its brighter diagonal, so the darkening doesn't look lopsided.
+- **Across chunk borders:** meshing reads all 8 surrounding chunks, so corners are shaded correctly at chunk edges too. Distant LOD terrain is shaded the same way from its column heights.
+
+**Directional sunlight**
+
+- **A sun with a position:** `Sun` has an elevation and azimuth, and each face gets sky light plus sunlight scaled by how directly it faces the sun.
+- **Normals for free:** the fragment shader works out each face's direction from how its position changes between neighbouring pixels (`dFdx`/`dFdy`), so the mesh doesn't need to store normals.
+
+**Multithreaded chunk loading**
+
+| | Before | After |
+|---|---|---|
+| Streaming chunks while moving | ~37 chunks/s | ~9,000 chunks/s |
+| Building the spawn area at startup | ~2.1 s | ~0.47 s |
+
+- **Worker pool:** a coordinator thread picks missing chunks nearest first and hands them to a pool of worker threads, one for each core except two.
+- **Keeping up with the player:** only a few chunks are queued at a time, and the coordinator rescans from the player's position often, so the nearest chunks are never stuck behind an old backlog.
+- **Parallel startup:** the spawn area is generated and its mesh data built on all cores, then uploaded to the GPU on the main thread.
+
+**What I learned**
+
+- **The bottleneck wasn't the CPU.** A chunk takes only ~0.2 ms to generate, but the old loader loaded 2 and then slept for 50 ms. Removing that limit mattered more than adding threads.
+- **Read-only data is easy to share.** The terrain generator never changes after it's created, so many threads can use it at once without locks.
+- **OpenGL stays on one thread.** Mesh data can be built anywhere, but GPU buffers have to be created on the render thread.
+
+**Next:** placing blocks, saving worlds, biomes, caves and shadows. See the [roadmap](#roadmap).
 
 ## Tech stack
 
@@ -154,7 +195,7 @@ cd VoxelEngine
 ./gradlew run
 ```
 
-The first launch downloads the dependencies. After that, the spawn area is generated before the window starts responding, which takes a few seconds.
+The first launch downloads the dependencies. After that, the spawn area is generated before the window starts responding, which takes a moment.
 
 > **Running from an IDE (IntelliJ):** set the main class to `Main`, set the working directory to the project root, and add the VM option `-XstartOnFirstThread`. macOS requires GLFW to run on the main thread, and `./gradlew run` adds this option for you automatically.
 
@@ -180,16 +221,17 @@ The first launch downloads the dependencies. After that, the spawn area is gener
 ## How it works
 
 1. **Generation:** `TerrainGenerator` combines several Perlin noise layers for each column: broad swells, small hills, a desert mask with ridged dunes, and a rare mountain mask with ridged peaks. The coordinates are warped so nothing lines up on a grid. Surface blocks are then chosen from height and slope: snow above the snow line, stone on high ground and cliffs, sand in deserts and grass elsewhere.
-2. **Streaming:** `ChunkLoader` runs on its own thread. It works out which chunks fall inside the full-detail distance, generates their block data, and queues them. Further out, `LodManager` picks LOD regions from a quadtree (`LodSelection`), and `LodMesher` builds their simplified meshes straight from the terrain generator.
-3. **Meshing:** each frame, `ChunkManager.buildQueuedMeshes()` meshes up to 2 chunks whose 4 neighbours are all loaded, so each chunk is meshed only once. Only visible faces are emitted, and each vertex is packed into a single `int`.
-4. **Rendering:** `Renderer` updates the view frustum. Chunks outside it, and chunks with nothing to draw, are skipped. Full-detail chunks are drawn first, then LOD regions, each nearest first, using one shader, one texture atlas and one shared index buffer. The NanoVG HUD is drawn on top.
+2. **Streaming:** `ChunkLoader` runs on its own thread. It works out which chunks fall inside the full-detail distance, nearest first, and hands them to a pool of worker threads that generate their block data in parallel and queue them. Further out, `LodManager` picks LOD regions from a quadtree (`LodSelection`), and `LodMesher` builds their simplified meshes straight from the terrain generator.
+3. **Meshing:** each frame, `ChunkManager.buildQueuedMeshes()` meshes up to 2 chunks whose 8 neighbours are all loaded, so each chunk is meshed only once. Only visible faces are emitted, each corner gets an ambient occlusion level, and each vertex is packed into a single `int`.
+4. **Rendering:** `Renderer` updates the view frustum. Chunks outside it, and chunks with nothing to draw, are skipped. Full-detail chunks are drawn first, then LOD regions, each nearest first, using one shader, one texture atlas and one shared index buffer. The shader darkens each face by its ambient occlusion and shades it by the sun's direction. The NanoVG HUD is drawn on top.
 
 ## Roadmap
 
 - [ ] Block placing and a hotbar
 - [ ] Saving and loading worlds
 - [ ] Biomes, trees and caves
-- [ ] Lighting and ambient occlusion
+- [x] Ambient occlusion and directional sunlight
+- [ ] Shadows and a day/night cycle
 - [ ] Windows and Linux support
 - [ ] Modding API
 
