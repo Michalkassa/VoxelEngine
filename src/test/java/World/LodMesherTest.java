@@ -156,6 +156,54 @@ class LodMesherTest {
         assertNotEquals(grassU, sandU);
     }
 
+    // Terrain that steps up from 64 to 80 blocks at world x = 16
+    private static class StepGenerator extends FlatGenerator {
+        StepGenerator() {
+            super(64);
+        }
+
+        @Override
+        public int getHeight(int x, int z) {
+            return x >= 16 ? 80 : 64;
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {1, 2, 3, 4})
+    void flatTerrainTopIsFullyLit(int level) {
+        int[] data = LodMesher.buildVertexData(new LodNode(level, 0, 0), new FlatGenerator(64));
+
+        for (int quad = 0; quad < data.length / 4; quad++) {
+            if (normal(data, quad).y < 0.5f) continue;
+            for (int i = 0; i < 4; i++) {
+                assertEquals(3, Chunk.unpackAo(data[quad * 4 + i]), "quad " + quad);
+            }
+        }
+    }
+
+    @Test
+    void groundAtFootOfStepIsShaded() {
+        // Level 1 voxels are 2 blocks wide: columns 0-7 are 32 voxels tall and columns 8-15 are 40
+        int[] data = LodMesher.buildVertexData(new LodNode(1, 0, 0), new StepGenerator());
+
+        int shaded = 0, open = 0;
+        for (int quad = 0; quad < data.length / 4; quad++) {
+            if (normal(data, quad).y < 0.5f) continue;
+            for (int i = 0; i < 4; i++) {
+                int vertex = data[quad * 4 + i];
+                if (Chunk.unpackY(vertex) != 32) continue;
+                if (Chunk.unpackX(vertex) == 8) {
+                    assertTrue(Chunk.unpackAo(vertex) < 3, "corner against the step");
+                    shaded++;
+                } else if (Chunk.unpackX(vertex) <= 6) {
+                    assertEquals(3, Chunk.unpackAo(vertex), "corner away from the step");
+                    open++;
+                }
+            }
+        }
+        assertTrue(shaded > 0 && open > 0);
+    }
+
     @Test
     void sameNodeBuildsIdenticalMesh() {
         TerrainGenerator generator = new TerrainGenerator(21);

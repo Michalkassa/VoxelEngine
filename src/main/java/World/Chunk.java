@@ -119,6 +119,7 @@ public class Chunk {
 
     public int[] buildVertexData() {
         Chunk[] around = surroundingChunks();
+        BlockFaces.Solidity solidity = (sx, sy, sz) -> isSolidAt(sx, sy, sz, around);
         int[] ao = new int[4];
 
         int[] buffer = SCRATCH.get();
@@ -145,13 +146,7 @@ public class Chunk {
                         SCRATCH.set(buffer);
                     }
 
-                    for (int corner = 0; corner < 4; corner++) {
-                        int[][] samples = BlockFaces.AO_SAMPLE_OFFSETS[face][corner];
-                        ao[corner] = BlockFaces.ambientOcclusion(
-                                isSolidAt(x + samples[0][0], y + samples[0][1], z + samples[0][2], around),
-                                isSolidAt(x + samples[1][0], y + samples[1][1], z + samples[1][2], around),
-                                isSolidAt(x + samples[2][0], y + samples[2][1], z + samples[2][2], around));
-                    }
+                    BlockFaces.faceAmbientOcclusion(face, x, y, z, solidity, ao);
                     count = BlockFaces.emitFace(buffer, count, face, block, x, y, z, ao);
                 }
             }

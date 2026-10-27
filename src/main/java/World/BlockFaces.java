@@ -92,7 +92,7 @@ final class BlockFaces {
 
     private static final int[][][] FACE_CORNER_OFFSETS = new int[FACES.length][4][3];
     // For each face corner, the blocks in front of the face that can shade it: side 1, side 2 and the diagonal
-    static final int[][][][] AO_SAMPLE_OFFSETS = new int[FACES.length][4][3][3];
+    private static final int[][][][] AO_SAMPLE_OFFSETS = new int[FACES.length][4][3][3];
     private static final int[][][] PACKED_UVS = buildPackedUvs();
 
     static {
@@ -129,6 +129,21 @@ final class BlockFaces {
     static int ambientOcclusion(boolean side1, boolean side2, boolean diagonal) {
         if (side1 && side2) return 0;
         return AO_OPEN - ((side1 ? 1 : 0) + (side2 ? 1 : 0) + (diagonal ? 1 : 0));
+    }
+
+    interface Solidity {
+        boolean isSolid(int x, int y, int z);
+    }
+
+    // Fills ao with the ambient occlusion of the 4 corners of one face of the block at (x, y, z)
+    static void faceAmbientOcclusion(int face, int x, int y, int z, Solidity solidity, int[] ao) {
+        for (int corner = 0; corner < 4; corner++) {
+            int[][] samples = AO_SAMPLE_OFFSETS[face][corner];
+            ao[corner] = ambientOcclusion(
+                    solidity.isSolid(x + samples[0][0], y + samples[0][1], z + samples[0][2]),
+                    solidity.isSolid(x + samples[1][0], y + samples[1][1], z + samples[1][2]),
+                    solidity.isSolid(x + samples[2][0], y + samples[2][1], z + samples[2][2]));
+        }
     }
 
     static final int FACE_COUNT = FACES.length;
