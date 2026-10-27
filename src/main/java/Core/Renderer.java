@@ -17,6 +17,7 @@ import static org.lwjgl.opengl.GL11.glFrontFace;
 import static org.lwjgl.opengl.GL20.glGetUniformLocation;
 import static org.lwjgl.opengl.GL20.glUniformMatrix4fv;
 
+import World.Chunk;
 import World.World;
 
 public class Renderer {
@@ -31,6 +32,7 @@ public class Renderer {
 
     private final float PROJECTION_MAX_DISTANCE = 2048f;
     private int chunk_offset;
+    private int voxel_scale;
     private int view_transform ;
     private int  projection_transform;
 
@@ -52,6 +54,7 @@ public class Renderer {
         frustum = new Frustum();
 
         chunk_offset = glGetUniformLocation(shader.getShaderProgram(), "chunk_offset");
+        voxel_scale = glGetUniformLocation(shader.getShaderProgram(), "voxel_scale");
         view_transform = glGetUniformLocation(shader.getShaderProgram(), "view_transform");
         projection_transform = glGetUniformLocation(shader.getShaderProgram(), "projection_transform");
 
@@ -61,7 +64,8 @@ public class Renderer {
 
         float aspect_ratio = (float) width[0] / height[0];
 
-        projection.perspective((float)Math.toRadians(camera.getFOV()), aspect_ratio, 0.1f, PROJECTION_MAX_DISTANCE);
+        float farPlane = Math.max(PROJECTION_MAX_DISTANCE, (world.getRenderDistance() + 2) * Chunk.CHUNK_SIZE * 1.5f);
+        projection.perspective((float)Math.toRadians(camera.getFOV()), aspect_ratio, 0.1f, farPlane);
 
         glEnable(GL_DEPTH_TEST);
         glEnable(GL_CULL_FACE);
@@ -85,7 +89,7 @@ public class Renderer {
 
 
         frustum.update(projection,view);
-        world.render(frustum, camera.position, chunk_offset);
+        world.render(frustum, camera.position, chunk_offset, voxel_scale);
 
     }
 

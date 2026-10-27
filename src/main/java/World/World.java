@@ -1,14 +1,14 @@
 package World;
 
-import Core.Camera;
+import java.io.IOException;
+
+import org.joml.Vector3f;
+import org.joml.Vector3i;
+
 import Core.Frustum;
 import Entity.Player;
 import Storage.FileCreator;
 import Storage.SaveManager;
-import org.joml.Vector3f;
-import org.joml.Vector3i;
-
-import java.io.IOException;
 
 public class World {
     private final String name;
@@ -17,8 +17,12 @@ public class World {
     private final SaveManager saveManager;
     private final ChunkLoader chunkLoader;
     private final Player player;
-    private final int INITIAL_RENDER_DISTANCE = 32;
-    private final int RENDER_DISTANCE = 32;
+    private final LodManager lodManager;
+    // Full detail out to 32 chunks, then 2x blocks from 32, 4x from 64, 8x from 128 and 16x from 256 chunks.
+    // A larger spread pushes the coarser levels further out.
+    private final int DETAIL_DISTANCE = 32;
+    private final int LOD_SPREAD = 1;
+    private final int RENDER_DISTANCE = 128;
 
     public World(String name, Player player, long seed) {
         this.name = name;
@@ -37,15 +41,32 @@ public class World {
             }
         }
 
+        // Full chunks are only kept near the player, plus one ring so edge chunks can be meshed
         Vector3i spawnChunk = new Vector3i(0, 0, 0);
-        chunkManager.loadChunksInRadius(spawnChunk, INITIAL_RENDER_DISTANCE);
+        chunkManager.loadChunksInRadius(spawnChunk, DETAIL_DISTANCE + 1);
 
-        chunkLoader = new ChunkLoader(chunkManager, player, RENDER_DISTANCE);
+        lodManager = new LodManager(new TerrainGenerator(seed), chunkManager, DETAIL_DISTANCE, RENDER_DISTANCE, LOD_SPREAD);
+        lodManager.update(spawnChunk);
+        lodManager.buildAll();
+
+        chunkLoader = new ChunkLoader(chunkManager, player, DETAIL_DISTANCE + 1);
         chunkLoader.start();
     }
 
-    public void render(Frustum frustum, Vector3f cameraPosition, int chunkOffsetUniform) {
-        chunkManager.renderChunks(frustum, cameraPosition, chunkOffsetUniform);
+    public void render(Frustum frustum, Vector3f cameraPosition, int chunkOffsetUniform, int voxelScaleUniform) {
+        lodManager.render(frustum, cameraPosition, chunkOffsetUniform, voxelScaleUniform);
+    }
+
+    public int getRenderDistance() {
+        return RENDER_DISTANCE;
+    }
+
+    private Vector3i playerChunk() {
+        Vector3f position = player.getPosition();
+        return new Vector3i(
+                Math.floorDiv((int) Math.floor(position.x + 0.5f), Chunk.CHUNK_SIZE),
+                0,
+                Math.floorDiv((int) Math.floor(position.z + 0.5f), Chunk.CHUNK_SIZE));
     }
 
     public ChunkManager getChunkManager(){
@@ -54,6 +75,7 @@ public class World {
 
     public void update(){
         chunkManager.buildQueuedMeshes();
+        lodManager.update(playerChunk());
     }
 
     public int getSurfaceHeight(Vector3i worldPosition){
@@ -68,6 +90,7 @@ public class World {
     public void cleanup(){
         chunkLoader.stopLoading();
         chunkManager.cleanup();
+        lodManager.cleanup();
     }
 
     public SaveManager getSaveManager() {

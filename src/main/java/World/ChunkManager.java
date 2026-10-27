@@ -1,6 +1,5 @@
 package World;
 
-import Core.Frustum;
 import org.joml.Vector3f;
 import org.joml.Vector3i;
 
@@ -9,8 +8,6 @@ import java.lang.Math;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-import static org.lwjgl.opengl.GL46.glUniform3f;
-
 public class ChunkManager {
 
     private Map<Vector3i, Chunk> chunks;
@@ -18,7 +15,6 @@ public class ChunkManager {
     private Queue<Vector3i> chunksToBuild = new ConcurrentLinkedQueue<>();
     private Queue<Chunk> cleanupQueue = new ConcurrentLinkedQueue<>();
     private final Set<Vector3i> pendingMeshes = new LinkedHashSet<>();
-    private final ArrayList<Chunk> visibleChunks = new ArrayList<>();
     private long seed;
 
     public ChunkManager(long seed) {
@@ -146,40 +142,6 @@ public class ChunkManager {
                 }
             }
         }
-    }
-
-    public void renderChunks(Frustum frustum, Vector3f cameraPosition, int chunkOffsetUniform) {
-        visibleChunks.clear();
-        for (Chunk chunk : chunks.values()) {
-            if (!chunk.hasVisibleMesh()) continue;
-            Vector3i pos = chunk.getChunkPosition();
-            float minX = pos.x * Chunk.CHUNK_SIZE - 0.5f;
-            float minY = chunk.getMeshMinY() - 0.5f;
-            float minZ = pos.z * Chunk.CHUNK_SIZE - 0.5f;
-            float maxX = minX + Chunk.CHUNK_SIZE;
-            float maxY = chunk.getMeshMaxY() - 0.5f;
-            float maxZ = minZ + Chunk.CHUNK_SIZE;
-
-            if (frustum.isBoxVisible(minX, minY, minZ, maxX, maxY, maxZ)) {
-                visibleChunks.add(chunk);
-            }
-        }
-
-        // Nearest first so the depth test rejects hidden fragments early
-        visibleChunks.sort(Comparator.comparingDouble(chunk -> distanceSquared(chunk, cameraPosition)));
-
-        for (Chunk chunk : visibleChunks) {
-            Vector3i pos = chunk.getChunkPosition();
-            glUniform3f(chunkOffsetUniform, pos.x * Chunk.CHUNK_SIZE, 0, pos.z * Chunk.CHUNK_SIZE);
-            chunk.render();
-        }
-    }
-
-    private static float distanceSquared(Chunk chunk, Vector3f point) {
-        Vector3i pos = chunk.getChunkPosition();
-        float dx = pos.x * Chunk.CHUNK_SIZE + Chunk.CHUNK_SIZE / 2f - point.x;
-        float dz = pos.z * Chunk.CHUNK_SIZE + Chunk.CHUNK_SIZE / 2f - point.z;
-        return dx * dx + dz * dz;
     }
 
     public void loadChunkAsync(Vector3i position) {
