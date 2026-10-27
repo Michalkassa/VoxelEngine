@@ -7,8 +7,8 @@ uniform sampler2D ourTexture;
 uniform vec3 sun_direction;
 
 // Light every face gets, and the extra light a face gets when it points straight at the sun
-const float SKY_LIGHT = 0.6;
-const float SUN_LIGHT = 0.4;
+const float SKY_LIGHT = 0.5;
+const float SUN_LIGHT = 0.6;
 
 void main()
 {
