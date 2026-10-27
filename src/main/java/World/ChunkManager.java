@@ -146,23 +146,49 @@ public class ChunkManager {
         }
     }
 
+    // Loads and meshes every chunk in the square around centre. Generation and mesh building are spread over
+    // all cores, then the meshes are uploaded here, so this must be called on the render thread.
     public void loadChunksInRadius(Vector3i centre, int radius) {
+        List<Vector3i> missing = new ArrayList<>();
         for (int x = centre.x - radius; x <= centre.x + radius; x++) {
             for (int z = centre.z - radius; z <= centre.z + radius; z++) {
                 Vector3i pos = new Vector3i(x, 0, z);
                 if (!chunks.containsKey(pos)) {
-                    loadChunk(pos);
+                    missing.add(pos);
                 }
+            }
+        }
+
+        missing.parallelStream().forEach(pos ->
+                chunks.putIfAbsent(pos, new Chunk(pos, this, terrainGenerator.generateChunkTerrain(pos))));
+
+        List<Chunk> ready = new ArrayList<>();
+        for (Chunk chunk : chunks.values()) {
+            if (!chunk.hasMesh() && hasAllNeighbours(chunk.getChunkPosition())) {
+                ready.add(chunk);
+            }
+        }
+        List<int[]> vertexData = ready.parallelStream().map(Chunk::buildVertexData).toList();
+        for (int i = 0; i < ready.size(); i++) {
+            ready.get(i).uploadMesh(vertexData.get(i));
+        }
+
+        // Edge chunks wait for neighbours that the chunk loader will stream in later
+        for (Vector3i pos : missing) {
+            if (!chunks.get(pos).hasMesh()) {
+                pendingMeshes.add(pos);
             }
         }
     }
 
+    // Safe to call from several threads at once
     public void loadChunkAsync(Vector3i position) {
         if (!chunks.containsKey(position)) {
             byte[][][] generatedBlocks = terrainGenerator.generateChunkTerrain(position);
             Chunk chunk = new Chunk(position, this, generatedBlocks);
-            chunks.put(position, chunk);
-            chunksToBuild.add(position);
+            if (chunks.putIfAbsent(position, chunk) == null) {
+                chunksToBuild.add(position);
+            }
         }
     }
 

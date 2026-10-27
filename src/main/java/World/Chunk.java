@@ -163,8 +163,11 @@ public class Chunk {
     public static int unpackAo(int vertex) { return BlockFaces.unpackAo(vertex); }
 
     public void buildMesh(){
-        int[] data = buildVertexData();
+        uploadMesh(buildVertexData());
+    }
 
+    // buildVertexData can run on any thread, but this creates GPU buffers so it must run on the render thread
+    public void uploadMesh(int[] data){
         if (chunkMesh != null) {
             chunkMesh.cleanup();
             chunkMesh = null;
