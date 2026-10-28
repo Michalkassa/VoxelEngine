@@ -53,6 +53,18 @@ public class Renderer {
     private int light_space;
     private int shadow_map;
     private int shadow_texel;
+    private int sky;
+    private int fog_start;
+    private int fog_end;
+
+    // Sky colour used when there are no skybox images
+    private static final Vector3f SKY_COLOUR = new Vector3f(0.24f, 0.54f, 0.9f);
+    // Holds right.png, left.png, top.png, bottom.png, front.png and back.png
+    private static final String SKYBOX_DIRECTORY = "src/main/resources/images/skybox";
+    private static final int SKYBOX_UNIT = 2;
+    private Skybox skybox;
+    // Fog starts at this fraction of the render distance and is solid sky colour at its edge
+    private static final float FOG_START_FRACTION = 0.5f;
 
     // Shadows cover a 512 x 512 block square around the camera, at about 8 shadow map texels per block
     private static final float SHADOW_RADIUS = 256f;
@@ -97,16 +109,25 @@ public class Renderer {
         light_space = glGetUniformLocation(shader.getShaderProgram(), "light_space");
         shadow_map = glGetUniformLocation(shader.getShaderProgram(), "shadow_map");
         shadow_texel = glGetUniformLocation(shader.getShaderProgram(), "shadow_texel");
+        sky = glGetUniformLocation(shader.getShaderProgram(), "sky");
+        fog_start = glGetUniformLocation(shader.getShaderProgram(), "fog_start");
+        fog_end = glGetUniformLocation(shader.getShaderProgram(), "fog_end");
 
         shader.bind();
         glUniform1i(shadow_map, SHADOW_MAP_UNIT);
         glUniform1f(shadow_texel, 1f / SHADOW_RESOLUTION);
+
+        float fogEnd = world.getRenderDistance() * Chunk.CHUNK_SIZE;
+        glUniform1i(sky, SKYBOX_UNIT);
+        glUniform1f(fog_start, fogEnd * FOG_START_FRACTION);
+        glUniform1f(fog_end, fogEnd);
 
         shadowShader = new Shader("/shaders/shadowVertexShader.glsl", "/shaders/shadowFragmentShader.glsl");
         shadow_chunk_offset = glGetUniformLocation(shadowShader.getShaderProgram(), "chunk_offset");
         shadow_voxel_scale = glGetUniformLocation(shadowShader.getShaderProgram(), "voxel_scale");
         shadow_light_space = glGetUniformLocation(shadowShader.getShaderProgram(), "light_space");
         shadowMap = new ShadowMap(SHADOW_RESOLUTION);
+        skybox = new Skybox(SKYBOX_DIRECTORY, SKY_COLOUR);
 
         int[] width = new int[1];
         int[] height = new int[1];
@@ -129,11 +150,12 @@ public class Renderer {
 
         renderShadowMap();
 
-        glClearColor(0.24f, 0.54f, 0.9f, 1.0f); // sky blue
+        glClearColor(SKY_COLOUR.x, SKY_COLOUR.y, SKY_COLOUR.z, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        shader.bind();
 
         camera.getViewMatrix(view);
+        skybox.render(projection, view, SKYBOX_UNIT);
+        shader.bind();
 
         glUniformMatrix4fv(view_transform, false, view.get(matBuffer));
         glUniformMatrix4fv(projection_transform, false, projection.get(matBuffer));
@@ -142,6 +164,7 @@ public class Renderer {
         glUniformMatrix4fv(light_space, false, shadowProjection.getLightSpace().get(matBuffer));
 
         shadowMap.bindTexture(SHADOW_MAP_UNIT);
+        skybox.bindTexture(SKYBOX_UNIT);
         texture.bind();
 
 
@@ -180,5 +203,6 @@ public class Renderer {
         shader.cleanup();
         shadowShader.cleanup();
         shadowMap.cleanup();
+        skybox.cleanup();
     }
 }
