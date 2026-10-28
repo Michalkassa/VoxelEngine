@@ -18,8 +18,8 @@ public class World {
     private final ChunkLoader chunkLoader;
     private final Player player;
     private final LodManager lodManager;
-    // Afternoon sun, high enough to light the tops brightest and off-axis so each side gets a different shade
-    private final Sun sun = new Sun(50f, 30f);
+    // Late afternoon sun, around 4-5 pm: low enough for long shadows, off-axis so each side gets a different shade
+    private final Sun sun = new Sun(25f, 30f);
     // Full detail out to 32 chunks, then 2x blocks from 32, 4x from 64, 8x from 128 and 16x from 256 chunks.
     // A larger spread pushes the coarser levels further out.
     private final int DETAIL_DISTANCE = 32;
