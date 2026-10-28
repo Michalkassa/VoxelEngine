@@ -9,6 +9,9 @@ uniform vec3 sun_direction;
 uniform vec3 camera_position;
 uniform mat4 light_space;
 uniform float shadow_texel;
+uniform samplerCube sky;
+uniform float fog_start;
+uniform float fog_end;
 
 // Light every face gets, and the extra light a face gets when it points straight at the sun
 const float SKY_LIGHT = 0.5;
@@ -16,6 +19,9 @@ const float SUN_LIGHT = 0.6;
 
 // How far the shadow lookup is pushed out of the face, in blocks. Without it a face shadows itself in stripes.
 const float NORMAL_OFFSET = 0.08;
+// Fog takes its colour from a blurred mip level of the sky, so distant terrain melts into the horizon behind it
+const float FOG_SKY_BLUR = 4.0;
+
 // Shadows fade out over the outer part of the shadow map so its edge doesn't show as a line
 const float SHADOW_FADE_START = 0.85;
 
@@ -55,5 +61,11 @@ void main()
     float light = SKY_LIGHT + SUN_LIGHT * sunlight;
 
     vec4 colour = texture(ourTexture, TexCoord);
-    FragColor = vec4(colour.rgb * Ambient * light, colour.a);
+    vec3 lit = colour.rgb * Ambient * light;
+
+    // Distant terrain fades into the sky so the edge of the render distance doesn't show
+    float distance = length(RelativePos);
+    float fog = smoothstep(fog_start, fog_end, distance);
+    vec3 fogColour = textureLod(sky, RelativePos / distance, FOG_SKY_BLUR).rgb;
+    FragColor = vec4(mix(lit, fogColour, fog), colour.a);
 }

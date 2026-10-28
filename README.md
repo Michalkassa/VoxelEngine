@@ -14,6 +14,8 @@ I built it to learn graphics programming and Java, and eventually to write my ow
 - **Procedural terrain**: several layers of Perlin noise build the height map. Most of the world is small rolling hills and sandy deserts with dunes. Rare mountain ranges rise to snow-capped peaks, with bare stone on cliffs. The same seed always gives the same world.
 - **Infinite chunk streaming**: 16×256×16 chunks load and unload around the player, nearest first, generated in parallel on a pool of worker threads. Meshes are uploaded to the GPU on the main thread, a few per frame, so the game keeps running smoothly while chunks load.
 - **Lighting**: per-vertex ambient occlusion darkens creases and corners, and directional sunlight shades each face by how directly it faces the sun. Both work on near and distant terrain.
+- **Distance fog**: terrain fades into the sky colour towards the edge of the render distance, so the world has no visible edge.
+- **Skybox**: put six square images named `right.png`, `left.png`, `top.png`, `bottom.png`, `front.png` and `back.png` in `src/main/resources/images/skybox/` and they are loaded as a cube map around the world. The fog samples a blurred version of the same sky, so distant terrain blends into the horizon behind it. With no images, the sky is plain blue.
 - **Optimised meshing**: faces hidden by a neighbouring block are skipped, including faces on chunk borders. Each vertex is packed into a single `int`, and blocks are stored in sections so empty air takes no memory.
 - **Level of detail**: full-detail chunks are drawn out to 32 chunks. Beyond that, a quadtree swaps in simplified terrain with bigger blocks, so the world is visible out to 128 chunks.
 - **Frustum culling**: chunks outside the camera's view are never drawn.
