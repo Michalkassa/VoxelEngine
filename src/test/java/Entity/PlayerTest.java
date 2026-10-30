@@ -217,4 +217,79 @@ class PlayerTest {
         assertEquals(1f, player.getCamera().direction.x, EPS);
         assertEquals(0f, player.getCamera().direction.z, EPS);
     }
+
+    // A world where placed blocks are recorded, with every chunk loaded unless told otherwise
+    private ChunkManager placingWorld(java.util.Map<Vector3i, Byte> placed, boolean chunksLoaded) {
+        Chunk loaded = new Chunk(new Vector3i(), null, new byte[1][1][1]);
+        return new ChunkManager(0) {
+            @Override
+            public Chunk getChunk(Vector3i position) {
+                return chunksLoaded ? loaded : null;
+            }
+
+            @Override
+            public boolean isBlockAt(Vector3i position) {
+                return solidBlocks.contains(position) || placed.containsKey(position);
+            }
+
+            @Override
+            public void setBlockAt(Vector3i position, byte block) {
+                placed.put(new Vector3i(position), block);
+            }
+        };
+    }
+
+    @Test
+    void placesTheSelectedBlockInAnEmptySpot() {
+        java.util.Map<Vector3i, Byte> placed = new java.util.HashMap<>();
+        ChunkManager world = placingWorld(placed, true);
+
+        assertTrue(player.placeBlock(world, new Vector3i(2, 1, 0)));
+        assertEquals((byte) World.Block.STONE.ordinal(), placed.get(new Vector3i(2, 1, 0)));
+
+        player.setSelectedBlock(World.Block.SAND);
+        assertTrue(player.placeBlock(world, new Vector3i(-2, 1, 0)));
+        assertEquals((byte) World.Block.SAND.ordinal(), placed.get(new Vector3i(-2, 1, 0)));
+        assertEquals(World.Block.SAND, player.getSelectedBlock());
+    }
+
+    @Test
+    void cannotPlaceInsideThePlayer() {
+        java.util.Map<Vector3i, Byte> placed = new java.util.HashMap<>();
+        ChunkManager world = placingWorld(placed, true);
+
+        assertFalse(player.placeBlock(world, new Vector3i(0, 1, 0)));
+        assertFalse(player.placeBlock(world, new Vector3i(0, 2, 0)));
+        assertTrue(placed.isEmpty());
+    }
+
+    @Test
+    void canPlaceRightBesideAndAboveThePlayer() {
+        java.util.Map<Vector3i, Byte> placed = new java.util.HashMap<>();
+        ChunkManager world = placingWorld(placed, true);
+
+        assertTrue(player.placeBlock(world, new Vector3i(1, 1, 0)));
+        assertTrue(player.placeBlock(world, new Vector3i(0, 3, 0)));
+    }
+
+    @Test
+    void cannotPlaceIntoAnOccupiedBlock() {
+        java.util.Map<Vector3i, Byte> placed = new java.util.HashMap<>();
+        ChunkManager world = placingWorld(placed, true);
+
+        assertFalse(player.placeBlock(world, new Vector3i(3, 0, 0)));
+        assertTrue(player.placeBlock(world, new Vector3i(3, 1, 0)));
+        assertFalse(player.placeBlock(world, new Vector3i(3, 1, 0)));
+        assertEquals(1, placed.size());
+    }
+
+    @Test
+    void cannotPlaceOutsideTheWorldHeightOrInUnloadedChunks() {
+        java.util.Map<Vector3i, Byte> placed = new java.util.HashMap<>();
+
+        assertFalse(player.placeBlock(placingWorld(placed, true), new Vector3i(3, -1, 0)));
+        assertFalse(player.placeBlock(placingWorld(placed, true), new Vector3i(3, Chunk.CHUNK_HEIGHT, 0)));
+        assertFalse(player.placeBlock(placingWorld(placed, false), new Vector3i(3, 1, 0)));
+        assertTrue(placed.isEmpty());
+    }
 }

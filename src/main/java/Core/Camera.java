@@ -38,6 +38,12 @@ public class Camera {
         return raycast.getBlockPosition();
     }
 
+    public Vector3i shootPlacementRaycast(){
+        raycast.setDirection(direction);
+        raycast.setOrigin(position);
+        return raycast.getPlacementPosition();
+    }
+
     private void setDirection(float dt){
 
         if (camera_pitch > 89) camera_pitch = 89;
