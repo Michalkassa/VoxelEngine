@@ -12,5 +12,6 @@ public enum NoiseLayer {
     HILL_STRENGTH,
     DUNES,
     RIDGES,
-    DETAIL
+    DETAIL,
+    PATCHES
 }

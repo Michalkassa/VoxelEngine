@@ -26,7 +26,10 @@ public class MountainsBiome extends Biome {
                 new SurfaceSettings()
                         .top(Block.GRASS)
                         .filler(Block.DIRT, 4)
-                        .bareRockAbove(120)
+                        .bareSoilOnSlopes(2, 5)
+                        .stoneOnSlopes(3, 6)
+                        .bareRockAbove(105, 135)
+                        .patchiness(0.09, 0.3)
                         .snowAbove(165, 10.0, 7));
     }
 

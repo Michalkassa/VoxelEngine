@@ -49,18 +49,46 @@ public abstract class Biome {
         return 0.0;
     }
 
-    // Picks the blocks of a column. detail is a small noise value in [-1, 1] for breaking up hard lines.
-    public Column surface(int height, int slope, double detail) {
+    // Picks the blocks of the column at world x, z. detail is a small noise value in [-1, 1] for breaking up hard lines.
+    public Column surface(int x, int z, int height, int slope, double detail, TerrainNoise noise) {
         if (surface.snowLine() != SurfaceSettings.NEVER) {
             int snowLine = (int) (surface.snowLine() + detail * surface.snowLineJitter());
             if (height >= snowLine && slope < surface.cliffSlope()) {
                 return new Column(height, Block.SNOW, Block.SNOW, Math.min(4, 1 + (height - snowLine) / 10));
             }
         }
-        if (height >= surface.rockHeight() || slope >= surface.steepSlope()) {
+
+        // One roll per column decides both rules, so where they overlap stone patches sit inside bare soil patches
+        double roll = transitionRoll(x, z, noise);
+
+        double stoneChance = Math.max(
+                ramp(slope, surface.stoneSlopeStart(), surface.stoneSlopeFull()),
+                ramp(height, surface.rockHeightStart(), surface.rockHeightFull()));
+        if (roll < stoneChance) {
             return new Column(height, Block.STONE, Block.STONE, 0);
         }
-        return new Column(height, surface.top(), surface.filler(), surface.fillerDepth());
+
+        double thinning = ramp(slope, 0, surface.stoneSlopeFull());
+        int depth = (int) Math.round(surface.fillerDepth() - (surface.fillerDepth() - surface.minFillerDepth()) * thinning);
+
+        if (roll < ramp(slope, surface.soilSlopeStart(), surface.soilSlopeFull())) {
+            return new Column(height, surface.filler(), surface.filler(), depth);
+        }
+        return new Column(height, surface.top(), surface.filler(), depth);
+    }
+
+    // Patchy noise roughened by per-block speckle, in [0, 1]
+    private double transitionRoll(int x, int z, TerrainNoise noise) {
+        double patches = 0.5 + 0.5 * noise.fbm(NoiseLayer.PATCHES, new Vector2d(x, z), surface.patchScale(), 2);
+        double roll = (1.0 - surface.grit()) * patches + surface.grit() * noise.hash(x, z);
+        return Math.max(0.0, Math.min(1.0, roll));
+    }
+
+    // 0 below start, 1 at or above full, linear between
+    private static double ramp(double value, int start, int full) {
+        if (value < start) return 0.0;
+        if (value >= full) return 1.0;
+        return (value - start) / (full - start);
     }
 
     @Override

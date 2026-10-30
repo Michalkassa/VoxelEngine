@@ -165,7 +165,7 @@ public class TerrainGenerator {
                 climate.humidity() - detail * SURFACE_JITTER,
                 climate.elevation()
         );
-        return nearestBiome(jittered).surface(height, slope, detail);
+        return nearestBiome(jittered).surface(worldX, worldZ, height, slope, detail, noise);
     }
 
     public byte[][][] generateChunkTerrain(Vector3i chunkPosition) {
