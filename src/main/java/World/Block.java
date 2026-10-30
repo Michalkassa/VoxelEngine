@@ -1,5 +1,5 @@
 package World;
 
 public enum Block {
-    AIR, GRASS, DIRT, STONE, SAND, SNOW, WOOD, LEAF
+    AIR, GRASS, DIRT, STONE, SAND, SNOW, WOOD, LEAF, WATER
 }

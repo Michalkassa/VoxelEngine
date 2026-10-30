@@ -1,159 +1,198 @@
 package World;
 
+import World.Biome.Biome;
+import World.Biome.Biomes;
+import World.Biome.Climate;
+import World.Biome.NoiseLayer;
+import World.Biome.TerrainNoise;
 import org.joml.Vector2d;
 import org.joml.Vector3i;
 
+import java.util.List;
+
 
 /*
- * Layered height-map terrain.
+ * Biome-driven height-map terrain.
  *
- * The final height of a column is built from several independent noise fields:
- *  - continent : very broad swells so the base level drifts across the world
- *  - hills     : common small rolling hills, their strength varies by region
- *  - desert    : a region mask; inside it the ground is sand shaped into dunes
- *  - mountain  : a rare region mask; inside it ridged noise raises tall peaks
- *  - warp      : offsets the sample coordinates so nothing looks grid-aligned
+ * Every column goes through the same steps:
+ *  - warp    : the sample coordinates are offset so nothing looks grid-aligned
+ *  - climate : broad temperature, humidity and elevation fields give the column a Climate
+ *  - biomes  : biomes whose preferred climate is close enough each shape their own height,
+ *              and the heights are blended by how close each biome is, so borders stay smooth
+ *  - surface : the nearest biome picks the column's blocks from its height and slope
+ *  - water   : any column whose ground is below SEA_LEVEL is filled with water up to it
  *
- * Surface blocks are then picked from height and local slope, so snow settles
- * on high peaks and bare stone shows on cliffs.
+ * A broad continent swell is added on top of every biome so the base level drifts across the world.
+ * How each biome looks lives in its own class under World.Biome.
  */
 public class TerrainGenerator {
     private final long seed;
+    private final List<Biome> biomes;
+    private final TerrainNoise noise;
 
     private final PerlinNoise continentNoise;
-    private final PerlinNoise hillNoise;
-    private final PerlinNoise hillStrengthNoise;
-    private final PerlinNoise desertNoise;
-    private final PerlinNoise duneNoise;
-    private final PerlinNoise mountainMaskNoise;
-    private final PerlinNoise mountainNoise;
     private final PerlinNoise warpNoiseX;
     private final PerlinNoise warpNoiseZ;
-    private final PerlinNoise detailNoise;
+    private final PerlinNoise temperatureNoise;
+    private final PerlinNoise humidityNoise;
+    private final PerlinNoise elevationNoise;
+
+    // Water fills every column up to just below this height
+    public static final int SEA_LEVEL = 56;
 
     private static final int MIN_HEIGHT = 1;
     private static final int MAX_HEIGHT = Chunk.CHUNK_HEIGHT - 1;
 
-    private static final int BASE_HEIGHT = 64;
     private static final double CONTINENT_AMPLITUDE = 14.0;
-    private static final double HILL_AMPLITUDE = 12.0;
-    private static final double DUNE_AMPLITUDE = 6.0;
-    private static final double MOUNTAIN_BASE_LIFT = 30.0;
-    private static final double MOUNTAIN_AMPLITUDE = 130.0;
     private static final double WARP_STRENGTH = 45.0;
 
-    // Raw octave noise mostly sits within +-0.25, this stretches it to roughly [-1, 1]
-    private static final double NOISE_NORMALIZE = 4.0;
+    // Smaller scale = larger biomes
+    private static final double CLIMATE_SCALE = 0.0012;
+    private static final int CLIMATE_OCTAVES = 3;
 
-    // Mask thresholds on normalized noise: ~10% of the world rises into mountains
-    // (full height only in the top ~3%), ~20% of the world is desert
-    private static final double MOUNTAIN_MASK_START = 0.5;
-    private static final double MOUNTAIN_MASK_FULL = 0.9;
-    private static final double DESERT_MASK_START = 0.2;
-    private static final double DESERT_MASK_FULL = 0.45;
+    // How much further than the nearest biome another biome may be and still blend in.
+    // Larger values give wider, softer borders but cost more height samples per column.
+    private static final double BLEND_RANGE = 0.3;
 
-    private static final int ROCK_HEIGHT = 120;
-    private static final int SNOW_LINE = 165;
-    private static final double SNOW_LINE_JITTER = 10.0;
-    private static final int STEEP_SLOPE = 4;
-    private static final int CLIFF_SLOPE = 7;
-    private static final int DIRT_DEPTH = 4;
-    private static final int SAND_DEPTH = 5;
+    // Wobbles the climate used for surface blocks so biome edges aren't smooth curves
+    private static final double SURFACE_JITTER = 0.06;
 
-    public TerrainGenerator(long seed){
+    public TerrainGenerator(long seed) {
+        this(seed, Biomes.ALL);
+    }
+
+    public TerrainGenerator(long seed, List<Biome> biomes) {
+        if (biomes.isEmpty()) throw new IllegalArgumentException("terrain needs at least one biome");
         this.seed = seed;
-        this.continentNoise    = new PerlinNoise(seed);
-        this.hillNoise         = new PerlinNoise(seed + 1);
-        this.hillStrengthNoise = new PerlinNoise(seed + 2);
-        this.desertNoise       = new PerlinNoise(seed + 3);
-        this.duneNoise         = new PerlinNoise(seed + 4);
-        this.mountainMaskNoise = new PerlinNoise(seed + 5);
-        this.mountainNoise     = new PerlinNoise(seed + 6);
-        this.warpNoiseX        = new PerlinNoise(seed + 7);
-        this.warpNoiseZ        = new PerlinNoise(seed + 8);
-        this.detailNoise       = new PerlinNoise(seed + 9);
+        this.biomes = List.copyOf(biomes);
+        this.noise = new TerrainNoise(seed);
+        this.continentNoise   = new PerlinNoise(seed);
+        this.warpNoiseX       = new PerlinNoise(seed + 7);
+        this.warpNoiseZ       = new PerlinNoise(seed + 8);
+        this.temperatureNoise = new PerlinNoise(seed + 10);
+        this.humidityNoise    = new PerlinNoise(seed + 11);
+        this.elevationNoise   = new PerlinNoise(seed + 12);
     }
 
     public long getSeed() {
         return seed;
     }
 
-    private static double smoothstep(double edge0, double edge1, double x) {
-        double t = Math.max(0.0, Math.min(1.0, (x - edge0) / (edge1 - edge0)));
-        return t * t * (3.0 - 2.0 * t);
+    public List<Biome> getBiomes() {
+        return biomes;
     }
 
-    private static double fbm(PerlinNoise noise, Vector2d p, double scale, int octaves) {
-        double value = noise.getOctaveNoise(p, scale, octaves, 0.5, 2.0) * NOISE_NORMALIZE;
-        return Math.max(-1.0, Math.min(1.0, value));
+    private Vector2d warp(int x, int z) {
+        Vector2d raw = new Vector2d(x, z);
+        return new Vector2d(
+                x + TerrainNoise.fbm(warpNoiseX, raw, 0.004, 2) * WARP_STRENGTH,
+                z + TerrainNoise.fbm(warpNoiseZ, raw, 0.004, 2) * WARP_STRENGTH
+        );
     }
 
-    private double desertFactor(Vector2d p, double mountainFactor) {
-        double desert = fbm(desertNoise, p, 0.0018, 3);
-        return smoothstep(DESERT_MASK_START, DESERT_MASK_FULL, desert) * (1.0 - mountainFactor);
+    private Climate sampleClimate(Vector2d p) {
+        return new Climate(
+                TerrainNoise.fbm(temperatureNoise, p, CLIMATE_SCALE, CLIMATE_OCTAVES),
+                TerrainNoise.fbm(humidityNoise, p, CLIMATE_SCALE, CLIMATE_OCTAVES),
+                TerrainNoise.fbm(elevationNoise, p, CLIMATE_SCALE, CLIMATE_OCTAVES)
+        );
     }
 
-    private double mountainFactor(Vector2d p) {
-        double mask = fbm(mountainMaskNoise, p, 0.0012, 3);
-        return smoothstep(MOUNTAIN_MASK_START, MOUNTAIN_MASK_FULL, mask);
+    public Climate getClimate(int x, int z) {
+        return sampleClimate(warp(x, z));
+    }
+
+    private Biome nearestBiome(Climate climate) {
+        Biome nearest = biomes.get(0);
+        double nearestDistance = Double.MAX_VALUE;
+        for (Biome biome : biomes) {
+            double distance = biome.getClimate().distanceTo(climate);
+            if (distance < nearestDistance) {
+                nearest = biome;
+                nearestDistance = distance;
+            }
+        }
+        return nearest;
+    }
+
+    public Biome getBiome(int x, int z) {
+        return nearestBiome(getClimate(x, z));
     }
 
     public int getHeight(int x, int z) {
-        Vector2d raw = new Vector2d(x, z);
-        Vector2d p = new Vector2d(
-                x + fbm(warpNoiseX, raw, 0.004, 2) * WARP_STRENGTH,
-                z + fbm(warpNoiseZ, raw, 0.004, 2) * WARP_STRENGTH
-        );
+        Vector2d p = warp(x, z);
+        Climate climate = sampleClimate(p);
 
-        double height = BASE_HEIGHT + fbm(continentNoise, p, 0.0015, 4) * CONTINENT_AMPLITUDE;
-
-        double mountain = mountainFactor(p);
-        double desert = desertFactor(p, mountain);
-
-        // Small rolling hills everywhere, flatter in some regions and dampened in deserts
-        double hillStrength = 0.35 + 0.65 * smoothstep(-0.25, 0.25, fbm(hillStrengthNoise, p, 0.003, 2));
-        double hills = fbm(hillNoise, p, 0.012, 4) * HILL_AMPLITUDE * hillStrength;
-        height += hills * (1.0 - 0.7 * desert);
-
-        // Dunes: stretched ridged noise gives long wind-blown crests
-        Vector2d duneP = new Vector2d(p.x * 0.6 + p.y * 0.2, p.y * 1.4);
-        double dunes = duneNoise.getRidgedNoise(duneP, 0.025, 2, 0.4, 2.0) * DUNE_AMPLITUDE;
-        height += dunes * desert;
-
-        // Rare mountains: ridged peaks fading in from the mask edge
-        if (mountain > 0.0) {
-            // Sharpen the ridges so only the tallest points poke above the snow line
-            double ridges = Math.pow(mountainNoise.getRidgedNoise(p, 0.006, 5, 0.5, 2.1), 1.6);
-            height += mountain * (MOUNTAIN_BASE_LIFT + ridges * MOUNTAIN_AMPLITUDE * mountain);
+        double[] distances = new double[biomes.size()];
+        double nearest = Double.MAX_VALUE;
+        for (int i = 0; i < distances.length; i++) {
+            distances[i] = biomes.get(i).getClimate().distanceTo(climate);
+            nearest = Math.min(nearest, distances[i]);
         }
 
+        // Weights fall from 1 at the nearest biome to 0 at BLEND_RANGE further away,
+        // so they change continuously as the climate drifts and borders never step
+        double blended = 0.0;
+        double totalWeight = 0.0;
+        for (int i = 0; i < distances.length; i++) {
+            double t = 1.0 - (distances[i] - nearest) / BLEND_RANGE;
+            if (t <= 0.0) continue;
+            double weight = t * t;
+            blended += weight * biomes.get(i).height(p, noise);
+            totalWeight += weight;
+        }
+
+        double height = blended / totalWeight + TerrainNoise.fbm(continentNoise, p, 0.0015, 4) * CONTINENT_AMPLITUDE;
         return (int) Math.max(MIN_HEIGHT, Math.min(MAX_HEIGHT, Math.round(height)));
     }
 
-    public record Column(int height, Block surface, int surfaceDepth) {
+    // height is the ground height, water stands waterDepth blocks deep on top of it
+    public record Column(int height, Block surface, Block filler, int surfaceDepth, int waterDepth) {
+        public Column(int height, Block surface, Block filler, int surfaceDepth) {
+            this(height, surface, filler, surfaceDepth, 0);
+        }
+
+        // Grass is held up by dirt, every other surface block fills its own layer
+        public Column(int height, Block surface, int surfaceDepth) {
+            this(height, surface, surface == Block.GRASS ? Block.DIRT : surface, surfaceDepth);
+        }
+
+        public Column withWaterDepth(int depth) {
+            return new Column(height, surface, filler, surfaceDepth, depth);
+        }
+
+        // Height of the column's top including any water
+        public int top() {
+            return height + waterDepth;
+        }
+
+        // Depth is counted down from the top of the column, water included
         public Block blockAtDepth(int depth) {
+            if (depth < waterDepth) return Block.WATER;
+            depth -= waterDepth;
             if (depth == 0) return surface;
-            if (depth < surfaceDepth) return surface == Block.GRASS ? Block.DIRT : surface;
+            if (depth < surfaceDepth) return filler;
             return Block.STONE;
         }
     }
 
-    public Column describeColumn(int worldX, int worldZ, int height, int slope) {
-        Vector2d p = new Vector2d(worldX, worldZ);
-        double desert = desertFactor(p, mountainFactor(p));
-        double detail = fbm(detailNoise, p, 0.02, 2);
-        int snowLine = (int) (SNOW_LINE + detail * SNOW_LINE_JITTER);
+    // Height of the top of a column including any water standing on its ground
+    public int surfaceHeight(int groundHeight) {
+        return Math.max(groundHeight, SEA_LEVEL);
+    }
 
-        if (height >= snowLine && slope < CLIFF_SLOPE) {
-            return new Column(height, Block.SNOW, Math.min(4, 1 + (height - snowLine) / 10));
-        }
-        if (height >= ROCK_HEIGHT || slope >= STEEP_SLOPE) {
-            return new Column(height, Block.STONE, 0);
-        }
-        if (desert > 0.5 + detail * 0.3) {
-            return new Column(height, Block.SAND, SAND_DEPTH);
-        }
-        return new Column(height, Block.GRASS, DIRT_DEPTH);
+    public Column describeColumn(int worldX, int worldZ, int height, int slope) {
+        Vector2d p = warp(worldX, worldZ);
+        Climate climate = sampleClimate(p);
+        double detail = noise.fbm(NoiseLayer.DETAIL, p, 0.02, 2);
+
+        Climate jittered = new Climate(
+                climate.temperature() + detail * SURFACE_JITTER,
+                climate.humidity() - detail * SURFACE_JITTER,
+                climate.elevation()
+        );
+        return nearestBiome(jittered).surface(worldX, worldZ, height, slope, detail, noise)
+                .withWaterDepth(surfaceHeight(height) - height);
     }
 
     public byte[][][] generateChunkTerrain(Vector3i chunkPosition) {
@@ -180,8 +219,9 @@ public class TerrainGenerator {
 
                 Column column = describeColumn(worldX + x, worldZ + z, height, slope);
 
-                for (int y = 0; y < height; y++) {
-                    blocks[x][y][z] = (byte) column.blockAtDepth(height - 1 - y).ordinal();
+                int top = column.top();
+                for (int y = 0; y < top; y++) {
+                    blocks[x][y][z] = (byte) column.blockAtDepth(top - 1 - y).ordinal();
                 }
             }
         }

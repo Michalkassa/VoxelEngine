@@ -11,7 +11,7 @@ I built it to learn graphics programming and Java, and eventually to write my ow
 
 ## Features
 
-- **Procedural terrain**: several layers of Perlin noise build the height map. Most of the world is small rolling hills and sandy deserts with dunes. Rare mountain ranges rise to snow-capped peaks, with bare stone on cliffs. The same seed always gives the same world.
+- **Biome-based terrain**: each biome is its own class with its own terrain shape and blocks, and biomes are placed by a temperature, humidity and elevation climate. About 45% of the world is grassy plains, 25% oceans with sandy beaches, 17% hilly plains, 10% deserts with dunes and 3% mountain ranges with snow-capped peaks up to y≈240. Heights blend smoothly across biome borders, and grass gives way to dirt and stone gradually on slopes. The same seed always gives the same world.
 - **Infinite chunk streaming**: 16×256×16 chunks load and unload around the player, nearest first, generated in parallel on a pool of worker threads. Meshes are uploaded to the GPU on the main thread, a few per frame, so the game keeps running smoothly while chunks load.
 - **Lighting**: per-vertex ambient occlusion darkens creases and corners, and directional sunlight shades each face by how directly it faces the sun. Both work on near and distant terrain.
 - **Distance fog**: terrain fades into the sky colour towards the edge of the render distance, so the world has no visible edge.
@@ -207,6 +207,29 @@ The first launch downloads the dependencies. After that, the spawn area is gener
 ./gradlew test
 ```
 
+### World map preview
+
+Renders a top-down map of a seed straight from the terrain generator, without opening the game. The image is saved to `build/maps/`.
+
+```bash
+./gradlew previewMap --args="<seed> [areaInBlocks] [blocksPerPixel] [terrain|biomes] [centerX] [centerZ]"
+./gradlew previewMap --args="2 4096 4 biomes"
+```
+
+`areaInBlocks` is the width and height of the mapped area (default 4096). `blocksPerPixel` compresses the map (default 4): each pixel samples one column for a patch of that many blocks across, so 4096 blocks at 4 blocks per pixel is a 1024 px image with 16 times less work than mapping every block. Use 1 for full detail. `terrain` colours each column by its top block, and `biomes` colours it by biome. Both modes are hill-shaded.
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/maps/seed-2-terrain.png" alt="Top-down terrain map of seed 2: grassland, sandy deserts and beaches, deep blue oceans and grey snow-capped mountain ranges" width="100%"></td>
+    <td width="50%"><img src="docs/maps/seed-2-biomes.png" alt="Biome map of seed 2: blue ocean, light green plains, dark green hilly plains, tan desert and grey mountains" width="100%"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub><code>terrain</code></sub></td>
+    <td align="center"><sub><code>biomes</code>: ocean, plains, hilly plains, desert, mountains</sub></td>
+  </tr>
+</table>
+<sub>Seed 2, the default world, over 4096 × 4096 blocks centred on spawn at 4 blocks per pixel. Each map renders in under a second.</sub>
+
 ### Controls
 
 | Key | Action |
@@ -222,7 +245,7 @@ The first launch downloads the dependencies. After that, the spawn area is gener
 
 ## How it works
 
-1. **Generation:** `TerrainGenerator` combines several Perlin noise layers for each column: broad swells, small hills, a desert mask with ridged dunes, and a rare mountain mask with ridged peaks. The coordinates are warped so nothing lines up on a grid. Surface blocks are then chosen from height and slope: snow above the snow line, stone on high ground and cliffs, sand in deserts and grass elsewhere.
+1. **Generation:** `TerrainGenerator` gives each column a climate (temperature, humidity and elevation) from broad noise fields, after warping the coordinates so nothing lines up on a grid. Each biome in `World.Biome` (ocean, plains, hilly plains, desert, mountains) extends the `Biome` class and declares the climate it prefers, its terrain shape (`TerrainSettings` plus an optional custom `shape()`, such as dunes or ridged peaks) and its blocks (`SurfaceSettings`). Biomes close to the column's climate each shape their own height, and those heights are blended by how close each biome is, so borders never form cliffs. The nearest biome then picks the surface blocks from height and slope, and columns below sea level are filled with water, with sandy beaches along the shore. Grass wears to dirt and then stone gradually, in noisy patches, with thinner soil on steep ground; each biome sets these ranges in its `SurfaceSettings`. To add a biome, subclass `Biome` and register it in `Biomes.ALL`.
 2. **Streaming:** `ChunkLoader` runs on its own thread. It works out which chunks fall inside the full-detail distance, nearest first, and hands them to a pool of worker threads that generate their block data in parallel and queue them. Further out, `LodManager` picks LOD regions from a quadtree (`LodSelection`), and `LodMesher` builds their simplified meshes straight from the terrain generator.
 3. **Meshing:** each frame, `ChunkManager.buildQueuedMeshes()` meshes up to 2 chunks whose 8 neighbours are all loaded, so each chunk is meshed only once. Only visible faces are emitted, each corner gets an ambient occlusion level, and each vertex is packed into a single `int`.
 4. **Rendering:** `Renderer` updates the view frustum. Chunks outside it, and chunks with nothing to draw, are skipped. Full-detail chunks are drawn first, then LOD regions, each nearest first, using one shader, one texture atlas and one shared index buffer. The shader darkens each face by its ambient occlusion and shades it by the sun's direction. The NanoVG HUD is drawn on top.
@@ -231,7 +254,8 @@ The first launch downloads the dependencies. After that, the spawn area is gener
 
 - [ ] Block placing and a hotbar
 - [ ] Saving and loading worlds
-- [ ] Biomes, trees and caves
+- [x] Biomes, oceans and beaches
+- [ ] Rivers, lakes, trees and caves
 - [x] Ambient occlusion and directional sunlight
 - [ ] Shadows and a day/night cycle
 - [ ] Windows and Linux support

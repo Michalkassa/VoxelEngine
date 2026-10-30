@@ -20,6 +20,7 @@ class TerrainGeneratorTest {
     private static final byte STONE = (byte) Block.STONE.ordinal();
     private static final byte SAND = (byte) Block.SAND.ordinal();
     private static final byte SNOW = (byte) Block.SNOW.ordinal();
+    private static final byte WATER = (byte) Block.WATER.ordinal();
 
     private static TerrainGenerator generator;
     private static List<byte[][][]> area;
@@ -38,6 +39,14 @@ class TerrainGeneratorTest {
     private static int surfaceY(byte[][][] blocks, int x, int z) {
         for (int y = Chunk.CHUNK_HEIGHT - 1; y >= 0; y--) {
             if (blocks[x][y][z] != AIR) return y;
+        }
+        return -1;
+    }
+
+    // Top block of the ground itself, under any water
+    private static int groundY(byte[][][] blocks, int x, int z) {
+        for (int y = Chunk.CHUNK_HEIGHT - 1; y >= 0; y--) {
+            if (blocks[x][y][z] != AIR && blocks[x][y][z] != WATER) return y;
         }
         return -1;
     }
@@ -87,16 +96,33 @@ class TerrainGeneratorTest {
     }
 
     @Test
-    void columnTopMatchesGetHeight() {
-        Vector3i position = new Vector3i(-2, 0, 5);
-        byte[][][] blocks = generator.generateChunkTerrain(position);
+    void groundMatchesGetHeightAndWaterFillsUpToSeaLevel() {
+        int underwater = 0;
+        for (int i = 0; i < area.size(); i++) {
+            byte[][][] blocks = area.get(i);
+            int chunkX = i / AREA_CHUNKS - AREA_CHUNKS / 2;
+            int chunkZ = i % AREA_CHUNKS - AREA_CHUNKS / 2;
 
-        for (int x = 0; x < Chunk.CHUNK_SIZE; x++) {
-            for (int z = 0; z < Chunk.CHUNK_SIZE; z++) {
-                int expected = generator.getHeight(position.x * Chunk.CHUNK_SIZE + x, position.z * Chunk.CHUNK_SIZE + z);
-                assertEquals(expected - 1, surfaceY(blocks, x, z));
+            for (int x = 0; x < Chunk.CHUNK_SIZE; x++) {
+                for (int z = 0; z < Chunk.CHUNK_SIZE; z++) {
+                    int height = generator.getHeight(chunkX * Chunk.CHUNK_SIZE + x, chunkZ * Chunk.CHUNK_SIZE + z);
+                    int ground = groundY(blocks, x, z);
+                    int top = surfaceY(blocks, x, z);
+                    assertEquals(height - 1, ground);
+
+                    if (height < TerrainGenerator.SEA_LEVEL) {
+                        underwater++;
+                        assertEquals(TerrainGenerator.SEA_LEVEL - 1, top, "water surface off sea level");
+                        for (int y = ground + 1; y <= top; y++) {
+                            assertEquals(WATER, blocks[x][y][z], "gap in water at y=" + y);
+                        }
+                    } else {
+                        assertEquals(ground, top, "water above sea-level ground at y=" + ground);
+                    }
+                }
             }
         }
+        assertTrue(underwater > 0, "no underwater columns in the test area");
     }
 
     @Test
@@ -121,43 +147,59 @@ class TerrainGeneratorTest {
                 for (byte[] row : column) {
                     for (byte block : row) {
                         assertTrue(block == AIR || block == GRASS || block == DIRT || block == STONE
-                                || block == SAND || block == SNOW, "unexpected block " + block);
+                                || block == SAND || block == SNOW || block == WATER, "unexpected block " + block);
                     }
                 }
             }
         }
+    }
+
+    // Ground height difference across a column's neighbours, the same measure the generator uses
+    private static int interiorSlope(byte[][][] blocks, int x, int z) {
+        return Math.max(
+                Math.abs(groundY(blocks, x + 1, z) - groundY(blocks, x - 1, z)),
+                Math.abs(groundY(blocks, x, z + 1) - groundY(blocks, x, z - 1)));
+    }
+
+    // Checks top block, then a solid filler layer between minFiller and maxFiller blocks, then stone to the bottom.
+    // Flat columns must carry the full layer.
+    private static void assertLayered(byte top, byte filler, int minFiller, int maxFiller) {
+        int checked = 0;
+        for (byte[][][] blocks : area) {
+            for (int x = 1; x < Chunk.CHUNK_SIZE - 1; x++) {
+                for (int z = 1; z < Chunk.CHUNK_SIZE - 1; z++) {
+                    int surface = groundY(blocks, x, z);
+                    if (blocks[x][surface][z] != top) continue;
+
+                    int y = surface - 1;
+                    while (y >= 0 && blocks[x][y][z] == filler) y--;
+                    int fillerDepth = surface - 1 - y;
+
+                    assertTrue(fillerDepth >= minFiller && fillerDepth <= maxFiller,
+                            fillerDepth + " filler blocks under the top at y=" + surface);
+                    if (interiorSlope(blocks, x, z) == 0) {
+                        assertEquals(maxFiller, fillerDepth, "flat column at y=" + surface + " has thinned soil");
+                    }
+                    for (; y >= 0; y--) {
+                        assertEquals(STONE, blocks[x][y][z]);
+                    }
+                    checked++;
+                }
+            }
+        }
+        assertTrue(checked > 0, "no columns topped with block " + top);
     }
 
     @Test
     void grassSitsOnDirtOverStone() {
-        for (byte[][][] blocks : area) {
-            for (int x = 0; x < Chunk.CHUNK_SIZE; x++) {
-                for (int z = 0; z < Chunk.CHUNK_SIZE; z++) {
-                    int top = surfaceY(blocks, x, z);
-                    if (blocks[x][top][z] != GRASS) continue;
-                    for (int depth = 1; depth <= top; depth++) {
-                        byte expected = depth < 4 ? DIRT : STONE;
-                        assertEquals(expected, blocks[x][top - depth][z]);
-                    }
-                }
-            }
-        }
+        // Four blocks of soil counting the grass, thinning to two on steep ground
+        assertLayered(GRASS, DIRT, 1, 3);
     }
 
     @Test
     void sandColumnsAreSandOverStone() {
-        for (byte[][][] blocks : area) {
-            for (int x = 0; x < Chunk.CHUNK_SIZE; x++) {
-                for (int z = 0; z < Chunk.CHUNK_SIZE; z++) {
-                    int top = surfaceY(blocks, x, z);
-                    if (blocks[x][top][z] != SAND) continue;
-                    for (int depth = 1; depth <= top; depth++) {
-                        byte expected = depth < 5 ? SAND : STONE;
-                        assertEquals(expected, blocks[x][top - depth][z]);
-                    }
-                }
-            }
-        }
+        // Five blocks of sand counting the top, thinning to two on steep ground
+        assertLayered(SAND, SAND, 1, 4);
     }
 
     @Test
@@ -182,7 +224,7 @@ class TerrainGeneratorTest {
         for (byte[][][] blocks : area) {
             for (int x = 0; x < Chunk.CHUNK_SIZE; x++) {
                 for (int z = 0; z < Chunk.CHUNK_SIZE; z++) {
-                    int top = surfaceY(blocks, x, z);
+                    int top = groundY(blocks, x, z);
                     for (int y = 0; y < top - 5; y++) {
                         assertEquals(STONE, blocks[x][y][z]);
                     }
