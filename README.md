@@ -207,6 +207,29 @@ The first launch downloads the dependencies. After that, the spawn area is gener
 ./gradlew test
 ```
 
+### World map preview
+
+Renders a top-down map of a seed straight from the terrain generator, without opening the game. The image is saved to `build/maps/`.
+
+```bash
+./gradlew previewMap --args="<seed> [areaInBlocks] [blocksPerPixel] [terrain|biomes] [centerX] [centerZ]"
+./gradlew previewMap --args="2 4096 4 biomes"
+```
+
+`areaInBlocks` is the width and height of the mapped area (default 4096). `blocksPerPixel` compresses the map (default 4): each pixel samples one column for a patch of that many blocks across, so 4096 blocks at 4 blocks per pixel is a 1024 px image with 16 times less work than mapping every block. Use 1 for full detail. `terrain` colours each column by its top block, and `biomes` colours it by biome. Both modes are hill-shaded.
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/maps/seed-2-terrain.png" alt="Top-down terrain map of seed 2: grassland, sandy deserts and beaches, deep blue oceans and grey snow-capped mountain ranges" width="100%"></td>
+    <td width="50%"><img src="docs/maps/seed-2-biomes.png" alt="Biome map of seed 2: blue ocean, light green plains, dark green hilly plains, tan desert and grey mountains" width="100%"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub><code>terrain</code></sub></td>
+    <td align="center"><sub><code>biomes</code>: ocean, plains, hilly plains, desert, mountains</sub></td>
+  </tr>
+</table>
+<sub>Seed 2, the default world, over 4096 × 4096 blocks centred on spawn at 4 blocks per pixel. Each map renders in about 0.6 seconds.</sub>
+
 ### Controls
 
 | Key | Action |

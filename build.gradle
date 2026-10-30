@@ -119,6 +119,15 @@ test {
     useJUnitPlatform()
 }
 
+// Top-down preview of a seed: ./gradlew previewMap --args="<seed> [size] [blocksPerPixel] [terrain|biomes] [centerX] [centerZ]"
+tasks.register('previewMap', JavaExec) {
+    group = 'application'
+    description = 'Renders a top-down map of a world seed to build/maps'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'World.WorldMap'
+    workingDir = projectDir
+}
+
 
 
 project.ext.lwjglVersion = "3.4.0"
