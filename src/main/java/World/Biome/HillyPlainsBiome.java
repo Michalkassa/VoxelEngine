@@ -20,7 +20,7 @@ public class HillyPlainsBiome extends Biome {
 
     public HillyPlainsBiome() {
         super("Hilly Plains",
-                new Climate(0.0, 0.15, 0.5),
+                new Climate(0.0, 0.15, 0.73),
                 new TerrainSettings()
                         .baseHeight(64)
                         .hills(12.0, 0.012, 4)

@@ -9,7 +9,7 @@ public class PlainsBiome extends Biome {
 
     public PlainsBiome() {
         super("Plains",
-                new Climate(0.0, 0.3, 0.0),
+                new Climate(0.0, 0.3, 0.1),
                 new TerrainSettings()
                         .baseHeight(64)
                         .hills(12.0, 0.012, 4)

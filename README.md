@@ -11,7 +11,7 @@ I built it to learn graphics programming and Java, and eventually to write my ow
 
 ## Features
 
-- **Procedural terrain**: several layers of Perlin noise build the height map. Most of the world is small rolling hills and sandy deserts with dunes. Rare mountain ranges rise to snow-capped peaks, with bare stone on cliffs. The same seed always gives the same world.
+- **Biome-based terrain**: each biome is its own class with its own terrain shape and blocks, and biomes are placed by a temperature, humidity and elevation climate. About 45% of the world is grassy plains, 25% oceans with sandy beaches, 17% hilly plains, 10% deserts with dunes and 3% mountain ranges with snow-capped peaks up to y≈240. Heights blend smoothly across biome borders, and grass gives way to dirt and stone gradually on slopes. The same seed always gives the same world.
 - **Infinite chunk streaming**: 16×256×16 chunks load and unload around the player, nearest first, generated in parallel on a pool of worker threads. Meshes are uploaded to the GPU on the main thread, a few per frame, so the game keeps running smoothly while chunks load.
 - **Lighting**: per-vertex ambient occlusion darkens creases and corners, and directional sunlight shades each face by how directly it faces the sun. Both work on near and distant terrain.
 - **Distance fog**: terrain fades into the sky colour towards the edge of the render distance, so the world has no visible edge.
@@ -228,7 +228,7 @@ Renders a top-down map of a seed straight from the terrain generator, without op
     <td align="center"><sub><code>biomes</code>: ocean, plains, hilly plains, desert, mountains</sub></td>
   </tr>
 </table>
-<sub>Seed 2, the default world, over 4096 × 4096 blocks centred on spawn at 4 blocks per pixel. Each map renders in about 0.6 seconds.</sub>
+<sub>Seed 2, the default world, over 4096 × 4096 blocks centred on spawn at 4 blocks per pixel. Each map renders in under a second.</sub>
 
 ### Controls
 
@@ -254,7 +254,8 @@ Renders a top-down map of a seed straight from the terrain generator, without op
 
 - [ ] Block placing and a hotbar
 - [ ] Saving and loading worlds
-- [ ] Biomes, trees and caves
+- [x] Biomes, oceans and beaches
+- [ ] Rivers, lakes, trees and caves
 - [x] Ambient occlusion and directional sunlight
 - [ ] Shadows and a day/night cycle
 - [ ] Windows and Linux support

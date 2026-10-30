@@ -14,7 +14,7 @@ public class DesertBiome extends Biome {
 
     public DesertBiome() {
         super("Desert",
-                new Climate(0.7, -0.7, 0.0),
+                new Climate(0.83, -0.9, 0.0),
                 new TerrainSettings()
                         .baseHeight(64)
                         .hills(3.6, 0.012, 4)

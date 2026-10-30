@@ -9,7 +9,7 @@ public class OceanBiome extends Biome {
 
     public OceanBiome() {
         super("Ocean",
-                new Climate(0.0, 0.0, -0.7),
+                new Climate(0.0, 0.0, -0.74),
                 new TerrainSettings()
                         .baseHeight(36)
                         .hills(6.0, 0.008, 3),

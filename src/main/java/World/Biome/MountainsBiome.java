@@ -9,8 +9,8 @@ import org.joml.Vector2d;
 public class MountainsBiome extends Biome {
 
     // Lifts the whole range above the surrounding land before peaks are added
-    static final double BASE_LIFT = 30.0;
-    static final double PEAK_HEIGHT = 117.0;
+    static final double BASE_LIFT = 45.0;
+    static final double PEAK_HEIGHT = 140.0;
     // Smaller scale = wider ridges
     static final double RIDGE_SCALE = 0.006 / 1.3;
     private static final int RIDGE_OCTAVES = 5;
@@ -19,7 +19,7 @@ public class MountainsBiome extends Biome {
 
     public MountainsBiome() {
         super("Mountains",
-                new Climate(0.0, 0.0, 1.0),
+                new Climate(0.0, 0.0, 1.1),
                 new TerrainSettings()
                         .baseHeight(64)
                         .hills(12.0, 0.012, 4),
