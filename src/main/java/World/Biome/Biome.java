@@ -1,6 +1,7 @@
 package World.Biome;
 
 import World.Block;
+import World.TerrainGenerator;
 import World.TerrainGenerator.Column;
 import org.joml.Vector2d;
 
@@ -69,12 +70,23 @@ public abstract class Biome {
         }
 
         double thinning = ramp(slope, 0, surface.stoneSlopeFull());
-        int depth = (int) Math.round(surface.fillerDepth() - (surface.fillerDepth() - surface.minFillerDepth()) * thinning);
 
+        // Columns whose top block is underwater or no more than shoreReach blocks above the water line
+        if (surface.hasShore() && height <= TerrainGenerator.SEA_LEVEL + surface.shoreReach()) {
+            Block shore = surface.shoreBlock();
+            return new Column(height, shore, shore, thinnedDepth(surface.shoreDepth(), thinning));
+        }
+
+        int depth = thinnedDepth(surface.fillerDepth(), thinning);
         if (roll < ramp(slope, surface.soilSlopeStart(), surface.soilSlopeFull())) {
             return new Column(height, surface.filler(), surface.filler(), depth);
         }
         return new Column(height, surface.top(), surface.filler(), depth);
+    }
+
+    private int thinnedDepth(int fullDepth, double thinning) {
+        int minDepth = Math.min(fullDepth, surface.minFillerDepth());
+        return (int) Math.round(fullDepth - (fullDepth - minDepth) * thinning);
     }
 
     // Patchy noise roughened by per-block speckle, in [0, 1]

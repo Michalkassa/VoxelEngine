@@ -20,6 +20,7 @@ import java.util.List;
  *  - biomes  : biomes whose preferred climate is close enough each shape their own height,
  *              and the heights are blended by how close each biome is, so borders stay smooth
  *  - surface : the nearest biome picks the column's blocks from its height and slope
+ *  - water   : any column whose ground is below SEA_LEVEL is filled with water up to it
  *
  * A broad continent swell is added on top of every biome so the base level drifts across the world.
  * How each biome looks lives in its own class under World.Biome.
@@ -35,6 +36,9 @@ public class TerrainGenerator {
     private final PerlinNoise temperatureNoise;
     private final PerlinNoise humidityNoise;
     private final PerlinNoise elevationNoise;
+
+    // Water fills every column up to just below this height
+    public static final int SEA_LEVEL = 56;
 
     private static final int MIN_HEIGHT = 1;
     private static final int MAX_HEIGHT = Chunk.CHUNK_HEIGHT - 1;
@@ -142,17 +146,39 @@ public class TerrainGenerator {
         return (int) Math.max(MIN_HEIGHT, Math.min(MAX_HEIGHT, Math.round(height)));
     }
 
-    public record Column(int height, Block surface, Block filler, int surfaceDepth) {
+    // height is the ground height, water stands waterDepth blocks deep on top of it
+    public record Column(int height, Block surface, Block filler, int surfaceDepth, int waterDepth) {
+        public Column(int height, Block surface, Block filler, int surfaceDepth) {
+            this(height, surface, filler, surfaceDepth, 0);
+        }
+
         // Grass is held up by dirt, every other surface block fills its own layer
         public Column(int height, Block surface, int surfaceDepth) {
             this(height, surface, surface == Block.GRASS ? Block.DIRT : surface, surfaceDepth);
         }
 
+        public Column withWaterDepth(int depth) {
+            return new Column(height, surface, filler, surfaceDepth, depth);
+        }
+
+        // Height of the column's top including any water
+        public int top() {
+            return height + waterDepth;
+        }
+
+        // Depth is counted down from the top of the column, water included
         public Block blockAtDepth(int depth) {
+            if (depth < waterDepth) return Block.WATER;
+            depth -= waterDepth;
             if (depth == 0) return surface;
             if (depth < surfaceDepth) return filler;
             return Block.STONE;
         }
+    }
+
+    // Height of the top of a column including any water standing on its ground
+    public int surfaceHeight(int groundHeight) {
+        return Math.max(groundHeight, SEA_LEVEL);
     }
 
     public Column describeColumn(int worldX, int worldZ, int height, int slope) {
@@ -165,7 +191,8 @@ public class TerrainGenerator {
                 climate.humidity() - detail * SURFACE_JITTER,
                 climate.elevation()
         );
-        return nearestBiome(jittered).surface(worldX, worldZ, height, slope, detail, noise);
+        return nearestBiome(jittered).surface(worldX, worldZ, height, slope, detail, noise)
+                .withWaterDepth(surfaceHeight(height) - height);
     }
 
     public byte[][][] generateChunkTerrain(Vector3i chunkPosition) {
@@ -192,8 +219,9 @@ public class TerrainGenerator {
 
                 Column column = describeColumn(worldX + x, worldZ + z, height, slope);
 
-                for (int y = 0; y < height; y++) {
-                    blocks[x][y][z] = (byte) column.blockAtDepth(height - 1 - y).ordinal();
+                int top = column.top();
+                for (int y = 0; y < top; y++) {
+                    blocks[x][y][z] = (byte) column.blockAtDepth(top - 1 - y).ordinal();
                 }
             }
         }

@@ -25,11 +25,11 @@ public final class LodMesher {
             }
         }
 
-        // Column tops in voxels, with a ring of neighbouring columns around the region
+        // Column tops in voxels including water, with a ring of neighbouring columns around the region
         int[][] tops = new int[COLUMNS + 2][COLUMNS + 2];
         for (int i = 0; i < COLUMNS + 2; i++) {
             for (int k = 0; k < COLUMNS + 2; k++) {
-                tops[i][k] = voxelHeight(heights[i][k], scale);
+                tops[i][k] = voxelHeight(generator.surfaceHeight(heights[i][k]), scale);
             }
         }
         // A voxel is solid when it is below its column's top. Ambient occlusion only samples one column out.

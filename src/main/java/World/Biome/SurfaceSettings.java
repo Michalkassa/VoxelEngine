@@ -17,6 +17,7 @@ import World.Block;
  *       .bareSoilOnSlopes(2, 5)
  *       .stoneOnSlopes(3, 6)
  *       .bareRockAbove(110, 130)
+ *       .shore(Block.SAND, 5, 2)
  */
 public class SurfaceSettings {
     public static final int NEVER = Integer.MAX_VALUE;
@@ -35,6 +36,11 @@ public class SurfaceSettings {
 
     private double patchScale = 0.12;
     private double grit = 0.3;
+
+    private boolean hasShore = true;
+    private Block shoreBlock = Block.SAND;
+    private int shoreDepth = 5;
+    private int shoreReach = 2;
 
     private int snowLine = 165;
     private double snowLineJitter = 10.0;
@@ -90,6 +96,20 @@ public class SurfaceSettings {
     public SurfaceSettings patchiness(double scale, double grit) {
         this.patchScale = scale;
         this.grit = grit;
+        return this;
+    }
+
+    // Ground under water and up to reach blocks above sea level is made of this block, giving beaches and sea floors
+    public SurfaceSettings shore(Block block, int depth, int reach) {
+        this.hasShore = true;
+        this.shoreBlock = block;
+        this.shoreDepth = depth;
+        this.shoreReach = reach;
+        return this;
+    }
+
+    public SurfaceSettings noShore() {
+        this.hasShore = false;
         return this;
     }
 
@@ -152,6 +172,22 @@ public class SurfaceSettings {
 
     public double grit() {
         return grit;
+    }
+
+    public boolean hasShore() {
+        return hasShore;
+    }
+
+    public Block shoreBlock() {
+        return shoreBlock;
+    }
+
+    public int shoreDepth() {
+        return shoreDepth;
+    }
+
+    public int shoreReach() {
+        return shoreReach;
     }
 
     public int snowLine() {

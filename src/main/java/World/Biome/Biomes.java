@@ -8,6 +8,7 @@ import java.util.List;
 public final class Biomes {
 
     public static final List<Biome> ALL = List.of(
+            new OceanBiome(),
             new PlainsBiome(),
             new HillyPlainsBiome(),
             new DesertBiome(),
