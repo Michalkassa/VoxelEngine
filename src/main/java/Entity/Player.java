@@ -8,6 +8,7 @@ import Core.Camera;
 import Core.Input;
 import Core.Transform;
 import World.Block;
+import World.Chunk;
 import World.ChunkManager;
 
 public class Player extends Entity {
@@ -18,6 +19,7 @@ public class Player extends Entity {
     private static final float FLY_VERTICAL_SPEED = 8f;
     private static final float DOUBLE_TAP_WINDOW = 0.3f;
     private static final float BREAK_INTERVAL = 0.25f;
+    private static final float PLACE_INTERVAL = 0.25f;
     private static final float MOUSE_SENSITIVITY = 0.1f;
     private static final float ACCELERATION = 50f;
     private static final float GROUND_FRICTION = 30f;
@@ -32,6 +34,9 @@ public class Player extends Entity {
     private boolean flying = false;
     private float timeSinceJumpPress = Float.MAX_VALUE;
     private float breakCooldown = 0f;
+    private float placeCooldown = 0f;
+    // Block placed with right click, until there is a hotbar to choose from
+    private Block selectedBlock = Block.STONE;
 
     private float yaw = 0.0f;   // Rotation around Y axis
     private float pitch = 0.0f; // Rotation around X axis
@@ -103,6 +108,12 @@ public class Player extends Entity {
             breakTargetBlock(chunkManager);
         }
 
+        placeCooldown -= deltaTime;
+        if (Input.isMouseButtonPressed(GLFW.GLFW_MOUSE_BUTTON_RIGHT)) {
+            placeTargetBlock(chunkManager);
+        } else if (Input.isMouseButtonDown(GLFW.GLFW_MOUSE_BUTTON_RIGHT) && placeCooldown <= 0f) {
+            placeTargetBlock(chunkManager);
+        }
 
 
         if (flying && onGround) {
@@ -160,6 +171,33 @@ public class Player extends Entity {
         if (blockpos != null) {
             chunkManager.setBlockAt(blockpos, (byte) Block.AIR.ordinal());
         }
+    }
+
+    private void placeTargetBlock(ChunkManager chunkManager) {
+        placeCooldown = PLACE_INTERVAL;
+        Vector3i blockpos = camera.shootPlacementRaycast();
+        if (blockpos != null) {
+            placeBlock(chunkManager, blockpos);
+        }
+    }
+
+    // Places the selected block unless the spot is taken, outside the world or would trap the player
+    boolean placeBlock(ChunkManager chunkManager, Vector3i blockpos) {
+        if (blockpos.y < 0 || blockpos.y >= Chunk.CHUNK_HEIGHT) return false;
+        if (chunkManager.getChunk(new Vector3i(Math.floorDiv(blockpos.x, Chunk.CHUNK_SIZE), 0, Math.floorDiv(blockpos.z, Chunk.CHUNK_SIZE))) == null) return false;
+        if (chunkManager.isBlockAt(blockpos)) return false;
+        if (AABB.blockAABB(blockpos.x, blockpos.y, blockpos.z).intersects(boundingBox)) return false;
+
+        chunkManager.setBlockAt(blockpos, (byte) selectedBlock.ordinal());
+        return true;
+    }
+
+    public Block getSelectedBlock() {
+        return selectedBlock;
+    }
+
+    public void setSelectedBlock(Block block) {
+        this.selectedBlock = block;
     }
 
     public void jump() {

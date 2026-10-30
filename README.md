@@ -22,7 +22,7 @@ I built it to learn graphics programming and Java, and eventually to write my ow
 - **Texture atlas**: every block type samples from a single texture, so only one texture is bound per frame.
 - **Game modes**: Survival, with health, and Creative, where you can't take damage and can fly. Press `G` to switch.
 - **First-person physics**: AABB collision against the voxel grid, gravity, jumping, acceleration, separate ground and air friction, and flight in Creative.
-- **Block interaction**: a ray cast from the camera finds the block you are looking at so you can break it. Holding the button keeps breaking at a limited rate.
+- **Block interaction**: a ray walks the block grid from the camera, one block at a time, to find the block you are looking at and the face you are pointing at. Left click breaks it and right click places stone against that face, never inside yourself. Holding either button repeats at a limited rate.
 - **HUD**: a NanoVG overlay with a crosshair, FPS counter, position, velocity, current chunk, game mode and health.
 - **Tests and CI**: JUnit 5 unit tests cover the maths, terrain generation, chunks, physics, player and save files. GitHub Actions builds and tests every pull request.
 
@@ -240,6 +240,7 @@ Renders a top-down map of a seed straight from the terrain generator, without op
 | Double-tap `Space` | Start or stop flying (Creative) |
 | `Space` / `Left Shift` | Fly up / down (while flying) |
 | Left click | Break the block under the crosshair (hold to keep breaking) |
+| Right click | Place a block against the face under the crosshair (hold to keep placing) |
 | `G` | Switch between Survival and Creative |
 | `⌘ Q` | Quit |
 
@@ -252,7 +253,8 @@ Renders a top-down map of a seed straight from the terrain generator, without op
 
 ## Roadmap
 
-- [ ] Block placing and a hotbar
+- [x] Block placing
+- [ ] A hotbar to choose which block to place
 - [ ] Saving and loading worlds
 - [x] Biomes, oceans and beaches
 - [ ] Rivers, lakes, trees and caves
