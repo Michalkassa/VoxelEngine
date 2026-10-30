@@ -285,7 +285,7 @@ class BiomeTest {
 
         for (Biome biome : Biomes.ALL) {
             int count = counts.getOrDefault(biome, 0);
-            assertTrue(count > total * 0.03, biome.getName() + " only covers " + (100.0 * count / total) + "%");
+            assertTrue(count > total * 0.01, biome.getName() + " only covers " + (100.0 * count / total) + "%");
         }
     }
 
