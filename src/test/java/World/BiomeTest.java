@@ -314,13 +314,18 @@ class BiomeTest {
     @Test
     void sandAppearsInDesertsAndGrassInPlains() {
         TerrainGenerator generator = new TerrainGenerator(SEED);
-        int desertSand = 0, desertTotal = 0, plainsGrass = 0, plainsTotal = 0;
+        int desertSand = 0, desertTotal = 0, plainsGrass = 0, plainsTotal = 0, shoreSand = 0, shoreTotal = 0;
 
         for (int x = -4000; x <= 4000; x += 50) {
             for (int z = -4000; z <= 4000; z += 50) {
                 Biome biome = generator.getBiome(x, z);
-                Block top = generator.describeColumn(x, z, generator.getHeight(x, z), 0).surface();
-                if (biome instanceof DesertBiome) {
+                int height = generator.getHeight(x, z);
+                Block top = generator.describeColumn(x, z, height, 0).surface();
+                // Flat ground at or just above the waterline is beach or sea floor whatever the biome
+                if (height <= TerrainGenerator.SEA_LEVEL + 2) {
+                    shoreTotal++;
+                    if (top == Block.SAND) shoreSand++;
+                } else if (biome instanceof DesertBiome) {
                     desertTotal++;
                     if (top == Block.SAND) desertSand++;
                 } else if (biome instanceof PlainsBiome) {
@@ -333,5 +338,7 @@ class BiomeTest {
         // Edges are jittered, so a few border columns take their neighbour's blocks
         assertTrue(desertSand > desertTotal * 0.9, desertSand + " of " + desertTotal + " desert columns are sand");
         assertTrue(plainsGrass > plainsTotal * 0.9, plainsGrass + " of " + plainsTotal + " plains columns are grass");
+        assertTrue(shoreTotal > 0, "no shore columns sampled");
+        assertEquals(shoreTotal, shoreSand, shoreSand + " of " + shoreTotal + " shore columns are sand");
     }
 }

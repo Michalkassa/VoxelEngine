@@ -15,7 +15,7 @@ class BlockTest {
     @Test
     void blockOrderIsStableForSavedChunks() {
         assertArrayEquals(
-                new Block[]{Block.AIR, Block.GRASS, Block.DIRT, Block.STONE, Block.SAND, Block.SNOW, Block.WOOD, Block.LEAF},
+                new Block[]{Block.AIR, Block.GRASS, Block.DIRT, Block.STONE, Block.SAND, Block.SNOW, Block.WOOD, Block.LEAF, Block.WATER},
                 Block.values());
     }
 
