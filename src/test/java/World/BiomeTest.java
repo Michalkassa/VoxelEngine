@@ -4,6 +4,7 @@ import World.Biome.Biome;
 import World.Biome.Biomes;
 import World.Biome.Climate;
 import World.Biome.DesertBiome;
+import World.Biome.HillyPlainsBiome;
 import World.Biome.MountainsBiome;
 import World.Biome.PlainsBiome;
 import World.Biome.SurfaceSettings;
@@ -105,6 +106,25 @@ class BiomeTest {
 
         assertEquals(Block.STONE, desert.surface(200, 0, 0.0).surface());
         assertEquals(Block.SAND, desert.surface(64, 0, 0.0).surface());
+    }
+
+    @Test
+    void hillyPlainsSitBetweenPlainsAndMountains() {
+        TerrainNoise noise = new TerrainNoise(SEED);
+        Biome plains = new PlainsBiome();
+        Biome hilly = new HillyPlainsBiome();
+        Biome mountains = new MountainsBiome();
+        double plainsTotal = 0, hillyTotal = 0, mountainsTotal = 0;
+
+        for (int i = 0; i < 400; i++) {
+            Vector2d p = new Vector2d(i * 131, i * -89);
+            plainsTotal += plains.height(p, noise);
+            hillyTotal += hilly.height(p, noise);
+            mountainsTotal += mountains.height(p, noise);
+        }
+
+        assertTrue(hillyTotal > plainsTotal, "hilly plains average below plains");
+        assertTrue(hillyTotal < mountainsTotal, "hilly plains average above mountains");
     }
 
     @Test

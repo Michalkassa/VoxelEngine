@@ -9,6 +9,7 @@ public final class Biomes {
 
     public static final List<Biome> ALL = List.of(
             new PlainsBiome(),
+            new HillyPlainsBiome(),
             new DesertBiome(),
             new MountainsBiome()
     );
