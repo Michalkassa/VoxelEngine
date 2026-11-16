@@ -11,7 +11,7 @@ import World.Block;
 import World.Chunk;
 import World.ChunkManager;
 
-public class Player extends Entity {
+public class Player extends LivingEntity {
 
     private static final float MOVE_SPEED = 6f;
     private static final float JUMP_FORCE = 9f;
@@ -30,7 +30,6 @@ public class Player extends Entity {
     private Camera camera;
 
     private GameMode gameMode = GameMode.SURVIVAL;
-    private float health = MAX_HEALTH;
     private boolean flying = false;
     private float timeSinceJumpPress = Float.MAX_VALUE;
     private float breakCooldown = 0f;
@@ -45,7 +44,7 @@ public class Player extends Entity {
     private Vector3f right;
 
     public Player(Vector3f position, Vector3f scale) {
-        super(new Transform(position,scale));
+        super(new Transform(position, scale), MAX_HEALTH);
         this.forward = new Vector3f(0, 0, -1);
         this.right = new Vector3f(1, 0, 0);
         this.camera = new Camera(position, new Vector3f(0, 0, 0));
@@ -222,17 +221,9 @@ public class Player extends Entity {
         if (gameMode == GameMode.SURVIVAL) flying = false;
     }
 
-    public float getHealth() {
-        return health;
-    }
-
-    public void damage(float amount) {
-        if (gameMode == GameMode.CREATIVE) return;
-        health = Math.max(0f, health - amount);
-    }
-
-    public void heal(float amount) {
-        health = Math.min(MAX_HEALTH, health + amount);
+    @Override
+    protected boolean isInvulnerable() {
+        return gameMode == GameMode.CREATIVE;
     }
 
     private void updateCameraPosition() {
