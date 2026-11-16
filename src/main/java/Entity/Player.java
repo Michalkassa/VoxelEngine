@@ -21,10 +21,6 @@ public class Player extends LivingEntity {
     private static final float BREAK_INTERVAL = 0.25f;
     private static final float PLACE_INTERVAL = 0.25f;
     private static final float MOUSE_SENSITIVITY = 0.1f;
-    private static final float ACCELERATION = 50f;
-    private static final float GROUND_FRICTION = 30f;
-    private static final float AIR_FRICTION = 5f;
-    private static final float AIR_CONTROL = 8f;
     public static final float MAX_HEALTH = 20f;
 
     private Camera camera;
@@ -44,7 +40,7 @@ public class Player extends LivingEntity {
     private Vector3f right;
 
     public Player(Vector3f position, Vector3f scale) {
-        super(new Transform(position, scale), MAX_HEALTH);
+        super(new Transform(position, scale), MAX_HEALTH, MOVE_SPEED, JUMP_FORCE);
         this.forward = new Vector3f(0, 0, -1);
         this.right = new Vector3f(1, 0, 0);
         this.camera = new Camera(position, new Vector3f(0, 0, 0));
@@ -128,31 +124,7 @@ public class Player extends LivingEntity {
             if (Input.isKeyDown(GLFW.GLFW_KEY_LEFT_SHIFT)) velocity.y -= FLY_VERTICAL_SPEED;
         }
 
-        float maxSpeed = flying ? FLY_SPEED : MOVE_SPEED;
-
-        if (moveDirection.lengthSquared() > 0) {
-            moveDirection.normalize();
-
-            float accel = onGround || flying ? ACCELERATION : AIR_CONTROL;
-
-            velocity.x += moveDirection.x * accel * deltaTime;
-            velocity.z += moveDirection.z * accel * deltaTime;
-
-            float horizontalSpeed = (float) Math.sqrt(velocity.x * velocity.x + velocity.z * velocity.z);
-            if (horizontalSpeed > maxSpeed) {
-                float scale = maxSpeed / horizontalSpeed;
-                velocity.x *= scale;
-                velocity.z *= scale;
-            }
-        }
-        else {
-            float friction = onGround || flying ? GROUND_FRICTION : AIR_FRICTION;
-            velocity.x -= velocity.x * friction * deltaTime;
-            velocity.z -= velocity.z * friction * deltaTime;
-
-            if (Math.abs(velocity.x) < 0.01f) velocity.x = 0;
-            if (Math.abs(velocity.z) < 0.01f) velocity.z = 0;
-        }
+        setMoveDirection(moveDirection);
     }
 
     private void breakTargetBlock(ChunkManager chunkManager) {
@@ -190,11 +162,14 @@ public class Player extends LivingEntity {
         this.selectedBlock = block;
     }
 
-    public void jump() {
-        if (onGround) {
-            velocity.y = JUMP_FORCE;
-            onGround = false;
-        }
+    @Override
+    protected float getMaxSpeed() {
+        return flying ? FLY_SPEED : super.getMaxSpeed();
+    }
+
+    @Override
+    protected boolean hasFullControl() {
+        return flying || super.hasFullControl();
     }
 
     @Override
