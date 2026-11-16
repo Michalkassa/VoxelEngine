@@ -262,16 +262,19 @@ class LivingEntityTest {
 
     @Test
     void canJumpOntoAOneBlockStepWhileWalking() {
-        for (int z = -20; z <= 20; z++) solidBlocks.add(new Vector3i(3, 1, z));
+        for (int x = 3; x <= 20; x++)
+            for (int z = -20; z <= 20; z++) solidBlocks.add(new Vector3i(x, 1, z));
         TestLiving entity = standingEntity();
         entity.setMoveDirection(new Vector3f(1, 0, 0));
 
-        for (int i = 0; i < 180; i++) {
+        for (int i = 0; i < 90; i++) {
             entity.jump();
             entity.update(DT, chunkManager);
         }
+        entity.stopMoving();
+        simulate(entity, 60);
 
         assertTrue(entity.getPosition().x > 3, "did not get onto the step");
-        assertEquals(STANDING_Y + 1, entity.getPosition().y, 0.5f);
+        assertEquals(STANDING_Y + 1, entity.getPosition().y, EPS);
     }
 }
