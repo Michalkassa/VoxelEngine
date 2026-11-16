@@ -61,8 +61,8 @@ public class Game {
 
             window.update();
             world.update();
-            player.update(deltaTime, world.getChunkManager());
-            player.render();
+            world.updateEntities(deltaTime);
+            world.renderEntities();
             renderer.update(deltaTime);
             hudRenderer.render(width[0], height[0], deltaTime);
             glfwSwapBuffers(window.getWindowId());

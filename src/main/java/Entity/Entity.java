@@ -8,9 +8,14 @@ import org.joml.Vector3f;
 import org.joml.Vector3i;
 
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public abstract class Entity {
     private static final float GRAVITY_CONSTANT = 32f;
+    private static final AtomicInteger NEXT_ID = new AtomicInteger(1);
+
+    private final int id = NEXT_ID.getAndIncrement();
+    private boolean removed = false;
     protected Transform transform;
     protected Vector3f velocity;
     protected AABB boundingBox;
@@ -150,6 +155,20 @@ public abstract class Entity {
 
     public void cleanup(){
         if (mesh != null) mesh.cleanup();
+    }
+
+    // Unique for every entity created while the game runs
+    public int getId() {
+        return id;
+    }
+
+    // Marks the entity to be taken out of the world by its EntityManager
+    public void remove() {
+        removed = true;
+    }
+
+    public boolean isRemoved() {
+        return removed;
     }
 
     public Vector3f getVelocity() {

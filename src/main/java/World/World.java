@@ -6,6 +6,7 @@ import org.joml.Vector3f;
 import org.joml.Vector3i;
 
 import Core.Frustum;
+import Entity.EntityManager;
 import Entity.Player;
 import Storage.FileCreator;
 import Storage.SaveManager;
@@ -17,6 +18,7 @@ public class World {
     private final SaveManager saveManager;
     private final ChunkLoader chunkLoader;
     private final Player player;
+    private final EntityManager entityManager = new EntityManager();
     private final LodManager lodManager;
     // Late afternoon sun, around 4-5 pm: low enough for long shadows, off-axis so each side gets a different shade
     private final Sun sun = new Sun(25f, 30f);
@@ -30,6 +32,7 @@ public class World {
         this.name = name;
         this.seed = seed;
         this.player = player;
+        entityManager.add(player);
         this.chunkManager = new ChunkManager(seed);
         this.saveManager = new SaveManager(name);
 
@@ -75,6 +78,18 @@ public class World {
                 Math.floorDiv((int) Math.floor(position.z + 0.5f), Chunk.CHUNK_SIZE));
     }
 
+    public EntityManager getEntityManager() {
+        return entityManager;
+    }
+
+    public void updateEntities(float dt) {
+        entityManager.update(dt, chunkManager);
+    }
+
+    public void renderEntities() {
+        entityManager.render();
+    }
+
     public ChunkManager getChunkManager(){
         return chunkManager;
     }
@@ -95,6 +110,7 @@ public class World {
 
     public void cleanup(){
         chunkLoader.stopLoading();
+        entityManager.cleanup();
         chunkManager.cleanup();
         lodManager.cleanup();
     }
