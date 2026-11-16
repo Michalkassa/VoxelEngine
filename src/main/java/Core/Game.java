@@ -69,10 +69,12 @@ public class Game {
             glfwPollEvents();
         }
     }
+    // GPU resources must be freed while the OpenGL context still exists, so the window goes last.
+    // The renderer also cleans up the world, which stops chunk loading and cleans up every entity
     private void cleanup(){
-        window.cleanup();
         renderer.cleanup();
         hudRenderer.cleanup();
+        window.cleanup();
     }
 
     public void run(){
