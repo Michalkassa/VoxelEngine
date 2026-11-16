@@ -1,9 +1,10 @@
 package Core;
 
-import World.World;
-import org.joml.Vector3f;
 import java.lang.Math;
-import org.joml.*;
+
+import org.joml.Matrix4f;
+import org.joml.Vector3f;
+import org.joml.Vector3i;
 
 public class Camera {
 
@@ -12,7 +13,7 @@ public class Camera {
 
     private float camera_yaw = 0.0f;
     private float camera_pitch = 0.0f;
-    private float FOV = 60.0f;
+    private float FOV = 75.0f;
     private Raycast raycast;
     private final float INTERACTION_DISTANCE = 4f;
 

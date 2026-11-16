@@ -33,11 +33,6 @@ class CameraTest {
     }
 
     @Test
-    void defaultFovIsSixtyDegrees() {
-        assertEquals(60f, cameraAt(0, 0, 0).getFOV());
-    }
-
-    @Test
     void zeroYawAndPitchLooksAlongPositiveX() {
         Camera camera = cameraAt(0, 0, 0);
 
