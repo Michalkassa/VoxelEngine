@@ -44,10 +44,6 @@ public class Player extends Entity {
     private Vector3f forward;
     private Vector3f right;
 
-    private final float WIDTH = 0.75f;
-    private final float HEIGHT = 1.7f;
-    private final float LENGTH = 0.75f;
-
     public Player(Vector3f position, Vector3f scale) {
         super(new Transform(position,scale));
         this.forward = new Vector3f(0, 0, -1);
@@ -62,11 +58,6 @@ public class Player extends Entity {
         handleInput(dt , chunkManager);
         super.update(dt, chunkManager);
         updateCameraPosition();
-    }
-
-    @Override
-    public void render() {
-       return;
     }
 
     public void handleInput(float deltaTime, ChunkManager chunkManager) {
@@ -202,7 +193,6 @@ public class Player extends Entity {
 
     public void jump() {
         if (onGround) {
-            System.out.println("Jump");
             velocity.y = JUMP_FORCE;
             onGround = false;
         }
@@ -290,11 +280,6 @@ public class Player extends Entity {
         right.y = 0;
         right.z = (float) Math.sin(yawRad);
         right.normalize();
-    }
-
-
-    public Vector3f getPosition() {
-        return new Vector3f(transform.position.x, transform.position.y, transform.position.z);
     }
 
     public Camera getCamera() {

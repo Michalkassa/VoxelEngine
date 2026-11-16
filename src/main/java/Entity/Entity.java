@@ -3,7 +3,6 @@ package Entity;
 import Core.Mesh;
 import Core.Transform;
 import World.Chunk;
-import Core.Game;
 import World.ChunkManager;
 import org.joml.Vector3f;
 import org.joml.Vector3i;
@@ -22,83 +21,49 @@ public abstract class Entity {
 
     protected boolean onGround = false;
 
+    // Longest distance moved along one axis before checking for collisions, so fast entities cannot skip through blocks
+    private static final float MAX_COLLISION_STEP = 0.25f;
+
     protected Entity(Transform transform) {
-        this.transform = transform;
+        this.transform = new Transform(new Vector3f(transform.position), new Vector3f(transform.scale));
         this.velocity = new Vector3f(0, 0, 0);
-        this.boundingBox = new AABB(transform.position, transform.scale.x/2,transform.scale.y/2,transform.scale.z/2);
+        this.boundingBox = new AABB(this.transform.position, this.transform.scale.x/2, this.transform.scale.y/2, this.transform.scale.z/2);
     }
 
-    // In Entity
     public void update(float dt, ChunkManager chunkManager) {
         this.lastDt = dt;
 
-        Vector3i playerChunk = new Vector3i(
-                Math.floorDiv((int) transform.position.x, Chunk.CHUNK_SIZE),
+        Vector3i currentChunk = new Vector3i(
+                Math.floorDiv((int) Math.floor(transform.position.x), Chunk.CHUNK_SIZE),
                 0,
-                Math.floorDiv((int) transform.position.z, Chunk.CHUNK_SIZE)
+                Math.floorDiv((int) Math.floor(transform.position.z), Chunk.CHUNK_SIZE)
         );
-        if (chunkManager.getChunk(playerChunk) == null) {
+        if (chunkManager.getChunk(currentChunk) == null) {
             velocity.set(0, 0, 0);
             return;
         }
 
         applyGravity(dt);
         applyCollisions(chunkManager);
-
     }
 
-    protected void move(Vector3f velocity, ChunkManager chunkManager) {
-        transform.position.add(velocity);
-        applyCollisions(chunkManager);
+    // Moves the entity by the given displacement, stopping at blocks in the way
+    protected void move(Vector3f displacement, ChunkManager chunkManager) {
+        moveAndCollide(new Vector3f(displacement), chunkManager);
     }
 
+    // Moves the entity by its velocity over the last frame, stopping at blocks in the way
     protected void applyCollisions(ChunkManager chunkManager) {
+        moveAndCollide(new Vector3f(velocity).mul(lastDt), chunkManager);
+    }
+
+    private void moveAndCollide(Vector3f displacement, ChunkManager chunkManager) {
         if (chunkManager == null) return;
         onGround = false;
 
-
-        // X
-        transform.position.x += velocity.x * lastDt;
-        boundingBox.setPosition(transform.position);
-        for (Vector3i block : getOverlappingBlocks()) {
-            if (!chunkManager.isBlockAt(block)) continue;
-            AABB blockAABB = AABB.blockAABB(block.x, block.y, block.z);
-            if (!boundingBox.intersects(blockAABB)) continue;
-            if (velocity.x > 0) transform.position.x = blockAABB.getMin().x - boundingBox.getHalfExtents().x;
-            if (velocity.x < 0) transform.position.x = blockAABB.getMax().x + boundingBox.getHalfExtents().x;
-            velocity.x = 0;
-            boundingBox.setPosition(transform.position);
-        }
-
-        // Y
-        transform.position.y += velocity.y * lastDt;
-        boundingBox.setPosition(transform.position);
-        for (Vector3i block : getOverlappingBlocks()) {
-            if (!chunkManager.isBlockAt(block)) continue;
-            AABB blockAABB = AABB.blockAABB(block.x, block.y, block.z);
-            if (!boundingBox.intersects(blockAABB)) continue;
-            if (velocity.y > 0) transform.position.y = blockAABB.getMin().y - boundingBox.getHalfExtents().y;
-            if (velocity.y < 0) {
-                transform.position.y = blockAABB.getMax().y + boundingBox.getHalfExtents().y;
-                onGround = true;
-            }
-            velocity.y = 0;
-            boundingBox.setPosition(transform.position);
-        }
-
-        // Z
-        transform.position.z += velocity.z * lastDt;
-        boundingBox.setPosition(transform.position);
-        for (Vector3i block : getOverlappingBlocks()) {
-            if (!chunkManager.isBlockAt(block)) continue;
-            AABB blockAABB = AABB.blockAABB(block.x, block.y, block.z);
-            if (!boundingBox.intersects(blockAABB)) continue;
-            if (velocity.z > 0) transform.position.z = blockAABB.getMin().z - boundingBox.getHalfExtents().z;
-            if (velocity.z < 0) transform.position.z = blockAABB.getMax().z + boundingBox.getHalfExtents().z;
-            velocity.z = 0;
-            boundingBox.setPosition(transform.position);
-
-        }
+        moveAlongAxis(0, displacement.x, chunkManager);
+        moveAlongAxis(1, displacement.y, chunkManager);
+        moveAlongAxis(2, displacement.z, chunkManager);
 
         if (!onGround) {
             int x = (int) Math.floor(transform.position.x + 0.5f);
@@ -107,6 +72,41 @@ public abstract class Entity {
             if (chunkManager.isBlockAt(new Vector3i(x, y, z)))
                 onGround = true;
         }
+    }
+
+    // Moves along one axis (0 = x, 1 = y, 2 = z) in small steps, snapping against the first block hit
+    private void moveAlongAxis(int axis, float amount, ChunkManager chunkManager) {
+        if (amount == 0) return;
+        int steps = (int) Math.ceil(Math.abs(amount) / MAX_COLLISION_STEP);
+        float step = amount / steps;
+
+        for (int i = 0; i < steps; i++) {
+            transform.position.setComponent(axis, transform.position.get(axis) + step);
+            boundingBox.setPosition(transform.position);
+            if (resolveBlockCollision(axis, step, chunkManager)) return;
+        }
+    }
+
+    // Pushes the entity out of any block it overlaps on this axis. Returns true if it hit one
+    private boolean resolveBlockCollision(int axis, float direction, ChunkManager chunkManager) {
+        boolean hit = false;
+        for (Vector3i block : getOverlappingBlocks()) {
+            if (!chunkManager.isBlockAt(block)) continue;
+            AABB blockAABB = AABB.blockAABB(block.x, block.y, block.z);
+            if (!boundingBox.intersects(blockAABB)) continue;
+
+            float halfExtent = boundingBox.getHalfExtents().get(axis);
+            if (direction > 0) {
+                transform.position.setComponent(axis, blockAABB.getMin().get(axis) - halfExtent);
+            } else {
+                transform.position.setComponent(axis, blockAABB.getMax().get(axis) + halfExtent);
+                if (axis == 1) onGround = true;
+            }
+            velocity.setComponent(axis, 0);
+            boundingBox.setPosition(transform.position);
+            hit = true;
+        }
+        return hit;
     }
 
     private ArrayList<Vector3i> getOverlappingBlocks() {
@@ -134,7 +134,7 @@ public abstract class Entity {
     }
 
     public void render(){
-        mesh.draw();
+        if (mesh != null) mesh.draw();
     }
 
     public Vector3f getPosition() {
@@ -142,13 +142,14 @@ public abstract class Entity {
     }
 
     public void setPosition(Vector3f position){
-        transform.position= position;
-       velocity = new Vector3f(0,0,0);
-       onGround = false;
+        transform.position.set(position);
+        boundingBox.setPosition(transform.position);
+        velocity.set(0, 0, 0);
+        onGround = false;
     }
 
     public void cleanup(){
-        mesh.cleanup();
+        if (mesh != null) mesh.cleanup();
     }
 
     public Vector3f getVelocity() {
