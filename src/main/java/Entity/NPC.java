@@ -13,7 +13,8 @@ public class NPC extends LivingEntity {
     public static final float MAX_HEALTH = 10f;
     public static final float WALK_SPEED = 2.5f;
     private static final float JUMP_FORCE = 9f;
-    private static final Vector3f SIZE = new Vector3f(0.75f, 1.7f, 0.75f);
+    public static final float WIDTH = 0.75f;
+    public static final float HEIGHT = 1.7f;
 
     private static final float MIN_IDLE_TIME = 1f;
     private static final float MAX_IDLE_TIME = 4f;
@@ -34,7 +35,7 @@ public class NPC extends LivingEntity {
     }
 
     public NPC(Vector3f position, Random random) {
-        super(new Transform(position, SIZE), MAX_HEALTH, WALK_SPEED, JUMP_FORCE);
+        super(new Transform(position, new Vector3f(WIDTH, HEIGHT, WIDTH)), MAX_HEALTH, WALK_SPEED, JUMP_FORCE);
         this.random = random;
         this.stateTimeLeft = randomBetween(MIN_IDLE_TIME, MAX_IDLE_TIME);
     }

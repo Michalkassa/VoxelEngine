@@ -86,10 +86,6 @@ public class World {
         entityManager.update(dt, chunkManager);
     }
 
-    public void renderEntities() {
-        entityManager.render();
-    }
-
     public ChunkManager getChunkManager(){
         return chunkManager;
     }

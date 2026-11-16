@@ -1,4 +1,6 @@
 package Core;
+import Entity.NPC;
+import Entity.NPCSpawner;
 import Entity.Player;
 import UI.HudRenderer;
 import World.World;
@@ -7,7 +9,7 @@ import org.joml.Vector3i;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.opengl.GL;
 
-import java.sql.Time;
+import java.util.Random;
 
 import static org.lwjgl.glfw.GLFW.*;
 
@@ -21,6 +23,9 @@ public class Game {
     private HudRenderer hudRenderer;
 
     private final float MAXIMUM_DELTA_TIME = 0.05f;
+    private static final int NPC_COUNT = 5;
+    private static final float NPC_MIN_SPAWN_DISTANCE = 4f;
+    private static final float NPC_MAX_SPAWN_DISTANCE = 10f;
 
 
     private void init(){
@@ -34,6 +39,10 @@ public class Game {
         world = new World("MyWorld", player, 2);
         player.getCamera().setRaycast(new Raycast(world, 4));
         player.setPosition(new Vector3f(0,world.getSurfaceHeight(new Vector3i(0,0,0))+1,0));
+        for (NPC npc : NPCSpawner.spawnAround(player.getPosition(), NPC_COUNT, NPC_MIN_SPAWN_DISTANCE,
+                NPC_MAX_SPAWN_DISTANCE, new Random(), world::getSurfaceHeight)) {
+            world.getEntityManager().add(npc);
+        }
         renderer = new Renderer(world, player.getCamera());
         hudRenderer = new HudRenderer(player);
 
@@ -62,7 +71,6 @@ public class Game {
             window.update();
             world.update();
             world.updateEntities(deltaTime);
-            world.renderEntities();
             renderer.update(deltaTime);
             hudRenderer.render(width[0], height[0], deltaTime);
             glfwSwapBuffers(window.getWindowId());

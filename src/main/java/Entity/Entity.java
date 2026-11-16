@@ -157,6 +157,11 @@ public abstract class Entity {
         if (mesh != null) mesh.cleanup();
     }
 
+    // Width, height and depth of the entity's bounding box
+    public Vector3f getSize() {
+        return boundingBox.getSize();
+    }
+
     // Unique for every entity created while the game runs
     public int getId() {
         return id;

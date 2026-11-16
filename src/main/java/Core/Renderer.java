@@ -63,6 +63,7 @@ public class Renderer {
     private static final String SKYBOX_DIRECTORY = "src/main/resources/images/skybox";
     private static final int SKYBOX_UNIT = 2;
     private Skybox skybox;
+    private EntityRenderer entityRenderer;
     // Fog starts at this fraction of the render distance and is solid sky colour at its edge
     private static final float FOG_START_FRACTION = 0.5f;
 
@@ -128,6 +129,8 @@ public class Renderer {
         shadow_light_space = glGetUniformLocation(shadowShader.getShaderProgram(), "light_space");
         shadowMap = new ShadowMap(SHADOW_RESOLUTION);
         skybox = new Skybox(SKYBOX_DIRECTORY, SKY_COLOUR);
+        entityRenderer = new EntityRenderer();
+        entityRenderer.init();
 
         int[] width = new int[1];
         int[] height = new int[1];
@@ -170,7 +173,7 @@ public class Renderer {
 
         frustum.update(projection,view);
         world.render(frustum, camera.position, chunk_offset, voxel_scale);
-
+        entityRenderer.render(world.getEntityManager(), view, projection, sunDirection);
     }
 
     // Draws the terrain around the camera from the sun's point of view, keeping only how far away each surface is
@@ -204,5 +207,6 @@ public class Renderer {
         shadowShader.cleanup();
         shadowMap.cleanup();
         skybox.cleanup();
+        entityRenderer.cleanup();
     }
 }
