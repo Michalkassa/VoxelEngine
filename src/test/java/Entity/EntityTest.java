@@ -198,4 +198,104 @@ class EntityTest {
 
         assertEquals(new Vector3f(1, 2, 3), entity.getVelocity());
     }
+
+    // move() takes a displacement, so it should shift the entity by exactly that much
+    @Test
+    void moveDisplacesByExactlyTheGivenAmount() {
+        TestEntity entity = new TestEntity(new Vector3f(0, 100, 0));
+        entity.update(DT, chunkManager);
+        Vector3f before = entity.getPosition();
+
+        entity.move(new Vector3f(1, 0, 0), chunkManager);
+
+        assertEquals(before.x + 1, entity.getPosition().x, EPS);
+        assertEquals(before.y, entity.getPosition().y, EPS, "move also applied the stored velocity");
+        assertEquals(before.z, entity.getPosition().z, EPS);
+    }
+
+    @Test
+    void moveIsBlockedByWalls() {
+        addFloor(0);
+        for (int y = 1; y <= 3; y++) solidBlocks.add(new Vector3i(2, y, 0));
+        TestEntity entity = new TestEntity(new Vector3f(0, 0.5f + HALF_HEIGHT, 0));
+        simulate(entity, 5);
+
+        entity.move(new Vector3f(3, 0, 0), chunkManager);
+
+        assertEquals(1.5f - 0.375f, entity.getPosition().x, EPS, "entity passed through the wall");
+    }
+
+    // A world where only the chunk at the given chunk coordinates is loaded
+    private ChunkManager worldWithOnlyChunk(Vector3i loadedChunk) {
+        Chunk loaded = new Chunk(new Vector3i(), null, new byte[1][1][1]);
+        return new ChunkManager(0) {
+            @Override
+            public Chunk getChunk(Vector3i position) {
+                return position.equals(loadedChunk) ? loaded : null;
+            }
+
+            @Override
+            public boolean isBlockAt(Vector3i position) {
+                return solidBlocks.contains(position);
+            }
+        };
+    }
+
+    @Test
+    void entityJustBelowZeroUsesTheNegativeChunk() {
+        ChunkManager world = worldWithOnlyChunk(new Vector3i(-1, 0, 0));
+        TestEntity entity = new TestEntity(new Vector3f(-0.5f, 100, 5));
+
+        entity.update(DT, world);
+
+        assertTrue(entity.getPosition().y < 100, "entity in loaded chunk -1 was treated as unloaded");
+    }
+
+    @Test
+    void entityJustBelowZeroFreezesWhenNegativeChunkIsUnloaded() {
+        ChunkManager world = worldWithOnlyChunk(new Vector3i(0, 0, 0));
+        TestEntity entity = new TestEntity(new Vector3f(5, 100, -0.5f));
+
+        entity.update(DT, world);
+
+        assertEquals(100f, entity.getPosition().y, EPS, "entity in unloaded chunk -1 kept falling");
+    }
+
+    @Test
+    void setPositionCopiesTheGivenVector() {
+        TestEntity entity = new TestEntity(new Vector3f());
+        Vector3f target = new Vector3f(10, 50, 10);
+
+        entity.setPosition(target);
+        target.set(0, 0, 0);
+
+        assertEquals(new Vector3f(10, 50, 10), entity.getPosition());
+    }
+
+    @Test
+    void constructorCopiesTheGivenPosition() {
+        Vector3f start = new Vector3f(1, 2, 3);
+        TestEntity entity = new TestEntity(start);
+
+        start.set(9, 9, 9);
+
+        assertEquals(new Vector3f(1, 2, 3), entity.getPosition());
+    }
+
+    @Test
+    void setPositionMovesTheBoundingBox() {
+        TestEntity entity = new TestEntity(new Vector3f());
+
+        entity.setPosition(new Vector3f(10, 50, 10));
+
+        assertEquals(new Vector3f(10, 50, 10), entity.boundingBox.getCenter());
+    }
+
+    @Test
+    void entityWithoutMeshCanRenderAndCleanUp() {
+        TestEntity entity = new TestEntity(new Vector3f());
+
+        assertDoesNotThrow(entity::render);
+        assertDoesNotThrow(entity::cleanup);
+    }
 }

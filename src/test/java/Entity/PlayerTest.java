@@ -292,4 +292,14 @@ class PlayerTest {
         assertFalse(player.placeBlock(placingWorld(placed, false), new Vector3i(3, 1, 0)));
         assertTrue(placed.isEmpty());
     }
+
+    @Test
+    void canPlaceWhereThePlayerStoodBeforeTeleporting() {
+        java.util.Map<Vector3i, Byte> placed = new java.util.HashMap<>();
+        ChunkManager world = placingWorld(placed, true);
+
+        player.setPosition(new Vector3f(50, 50, 50));
+
+        assertTrue(player.placeBlock(world, new Vector3i(0, 1, 0)), "old bounding box still blocks placing");
+    }
 }
